@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { Loading } from "@/components/ui/loading"
 
 // Mock data for the dashboard
 const conversationData = [
@@ -15,6 +17,19 @@ const conversationData = [
 ]
 
 export function DashboardCharts() {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    // Simulate data loading
+    const timer = setTimeout(() => {
+      setData(conversationData)
+      setLoading(false)
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <Card>
       <CardHeader>
@@ -22,23 +37,29 @@ export function DashboardCharts() {
         <CardDescription>Number of conversations and responses over time</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={conversationData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="conversations"
-              stroke="var(--primary)"
-              strokeWidth={2}
-              activeDot={{ r: 8 }}
-            />
-            <Line type="monotone" dataKey="responses" stroke="var(--chart-2)" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
+            <Loading size="lg" />
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="conversations"
+                stroke="var(--primary)"
+                strokeWidth={2}
+                activeDot={{ r: 8 }}
+              />
+              <Line type="monotone" dataKey="responses" stroke="var(--chart-2)" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   )

@@ -25,7 +25,7 @@ export function HeroSection() {
             persona, and watch it handle inquiries 24/7.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            <Link href="/signup">
+            <Link href="/register">
               <Button size="lg" className="px-8">
                 Get Started Free
               </Button>
@@ -42,7 +42,7 @@ export function HeroSection() {
         <div className="mt-16 flex justify-center">
           <div className="relative w-full max-w-4xl rounded-lg border shadow-2xl overflow-hidden">
             <Image
-              src="/placeholder.svg?height=600&width=1200"
+              src="/images/home/dashboard-preview.png?height=600&width=1200"
               alt="ChatWise dashboard preview"
               width={1200}
               height={600}

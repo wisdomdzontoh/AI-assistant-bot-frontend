@@ -48,7 +48,7 @@ export function SiteHeader() {
               Log in
             </Button>
           </Link>
-          <Link href="/signup">
+          <Link href="/register">
             <Button size="sm">Get Started</Button>
           </Link>
         </div>
@@ -82,7 +82,7 @@ export function SiteHeader() {
                     Log in
                   </Button>
                 </Link>
-                <Link href="/signup">
+                <Link href="/register">
                   <Button className="w-full">Get Started</Button>
                 </Link>
               </div>

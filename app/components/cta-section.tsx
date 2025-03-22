@@ -10,7 +10,7 @@ export function CtaSection() {
           Join thousands of businesses using ChatWise to provide exceptional customer experiences with AI.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link href="/signup">
+          <Link href="/register">
             <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
               Start Your Free Trial
             </Button>
