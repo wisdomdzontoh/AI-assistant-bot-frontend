@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,13 +7,20 @@ import { ChatbotSettings } from "../../../components/chatbots/chatbot-settings"
 import { ChatbotTraining } from "../../../components/chatbots/chatbot-training"
 import { ChatbotAnalytics } from "../../../components/chatbots/chatbot-analytics"
 import { ArrowLeft } from "lucide-react"
+//import { type PageProps } from "@/types/next" // You can define this yourself (see below) or use inline
 
 export const metadata: Metadata = {
   title: "Chatbot Details - ChatWise",
   description: "Manage and configure your AI chatbot",
 }
 
-export default function ChatbotDetailPage({ params }: { params: { id: string } }) {
+type Props = {
+  params: {
+    id: string
+  }
+}
+
+export default function ChatbotDetailPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
