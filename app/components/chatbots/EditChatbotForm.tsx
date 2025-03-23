@@ -1,52 +1,76 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useEffect, useState } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Loader2, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Loader2, Save } from "lucide-react"
+import { ChatbotService } from "../../lib/api-services/chatbot-service"
+import {
+  Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChatbotService } from "../../lib/api-services/chatbot-service" // Make sure it's imported
-
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Chatbot name must be at least 2 characters.",
-  }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }),
-  welcomeMessage: z.string().min(5, {
-    message: "Welcome message must be at least 5 characters.",
-  }),
+  name: z.string().min(2, { message: "Chatbot name must be at least 2 characters." }),
+  description: z.string().min(10, { message: "Description must be at least 10 characters." }),
+  welcomeMessage: z.string().min(5, { message: "Welcome message must be at least 5 characters." }),
   persona: z.string(),
   primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, {
     message: "Please enter a valid hex color code.",
   }),
 })
 
-export function CreateChatbotForm() {
+export function EditChatbotForm() {
   const router = useRouter()
+  const { id } = useParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
-      welcomeMessage: "Hello! How can I help you today?",
+      welcomeMessage: "",
       persona: "professional",
       primaryColor: "#3B82F6",
     },
   })
 
+  useEffect(() => {
+    const loadChatbot = async () => {
+      try {
+        const chatbots = await ChatbotService.getChatbots()
+        const bot = chatbots.find((b) => b.id === Number(id))
+        if (!bot) {
+          toast.error("Chatbot not found")
+          router.push("/dashboard/chatbots")
+          return
+        }
+
+        form.reset({
+          name: bot.name,
+          description: bot.description || "",
+          welcomeMessage: bot.welcome_message || "",
+          persona: bot.persona || "professional",
+          primaryColor: bot.primary_color || "#3B82F6",
+        })
+      } catch (error) {
+        toast.error("Failed to load chatbot")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadChatbot()
+  }, [id, form, router])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
@@ -60,26 +84,26 @@ export function CreateChatbotForm() {
         instructions: `${values.welcomeMessage}\n\nPersona: ${values.persona}`,
         is_active: true,
       }
-      
 
-      const chatbot = await ChatbotService.createChatbot(payload)
-
-      toast.success(`Chatbot "${chatbot.name}" created successfully!`)
+      await ChatbotService.updateChatbot(Number(id), payload)
+      toast.success("Chatbot updated successfully!")
       router.push("/dashboard/chatbots")
     } catch (error) {
-      console.error("Error creating chatbot:", error)
-      toast.error("Failed to create chatbot. Please try again.")
+      toast.error("Failed to update chatbot. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  if (loading) {
+    return <p className="text-muted-foreground">Loading chatbot data...</p>
+  }
 
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Create a New Chatbot</CardTitle>
-        <CardDescription>Configure your AI assistant to match your brand and communication style</CardDescription>
+        <CardTitle>Edit Chatbot</CardTitle>
+        <CardDescription>Update your AI assistant’s settings and behavior</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -93,7 +117,7 @@ export function CreateChatbotForm() {
                   <FormControl>
                     <Input placeholder="e.g. Support Assistant" {...field} />
                   </FormControl>
-                  <FormDescription>This name will be displayed to your users in the chat widget.</FormDescription>
+                  <FormDescription>This name will be displayed to users in the chat widget.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -106,11 +130,9 @@ export function CreateChatbotForm() {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g. This chatbot helps customers with support questions" {...field} />
+                    <Textarea placeholder="e.g. This chatbot helps with support inquiries" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    A brief description of what this chatbot does (for your reference only).
-                  </FormDescription>
+                  <FormDescription>A short internal description of what this chatbot does.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -125,7 +147,7 @@ export function CreateChatbotForm() {
                   <FormControl>
                     <Textarea placeholder="e.g. Hello! How can I help you today?" {...field} />
                   </FormControl>
-                  <FormDescription>The first message users will see when they start a conversation.</FormDescription>
+                  <FormDescription>This message is shown to users when the chat starts.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -151,7 +173,7 @@ export function CreateChatbotForm() {
                       <SelectItem value="humorous">Humorous</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>The tone and style your chatbot will use when responding to users.</FormDescription>
+                  <FormDescription>Controls tone and language used by the bot.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -169,7 +191,7 @@ export function CreateChatbotForm() {
                     </FormControl>
                     <Input type="color" value={field.value} onChange={field.onChange} className="w-12 h-10 p-1" />
                   </div>
-                  <FormDescription>The main color for your chatbot widget. Use a hex color code.</FormDescription>
+                  <FormDescription>Used to theme the chat widget. Use a hex color code.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -183,12 +205,12 @@ export function CreateChatbotForm() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Create Chatbot
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
                   </>
                 )}
               </Button>
@@ -199,4 +221,3 @@ export function CreateChatbotForm() {
     </Card>
   )
 }
-

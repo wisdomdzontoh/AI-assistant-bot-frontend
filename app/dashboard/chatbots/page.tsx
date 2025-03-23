@@ -8,43 +8,57 @@ import { Plus } from "lucide-react"
 import { type Chatbot, ChatbotService } from "../../lib/api-services/chatbot-service"
 import { LoadingScreen } from "@/components/ui/loading-screen"
 import { toast } from "sonner"
+import { Dialog, DialogTrigger, DialogContent, DialogFooter } from "@/components/ui/dialog"
+import { DialogTitle } from "@/components/ui/dialog"
+
+
 
 export default function ChatbotsPage() {
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
   const [loading, setLoading] = useState(true)
+  const [pendingDelete, setPendingDelete] = useState<Chatbot | null>(null)
+
+  const fetchChatbots = async () => {
+    try {
+      const data = await ChatbotService.getChatbots()
+      setChatbots(data)
+    } catch (error) {
+      console.error("Failed to fetch chatbots:", error)
+      toast.error("Failed to load chatbots")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchChatbots = async () => {
-      try {
-        const data = await ChatbotService.getChatbots()
-        setChatbots(data)
-      } catch (error) {
-        console.error("Failed to fetch chatbots:", error)
-        toast.error("Failed to load chatbots")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchChatbots()
   }, [])
 
-  const handleDeleteChatbot = async (chatbot: Chatbot) => {
-    // This would typically show a confirmation dialog
-    if (confirm(`Are you sure you want to delete ${chatbot.name}?`)) {
-      try {
-        // Implement delete API call
-        // await ChatbotService.deleteChatbot(chatbot.id)
+  const handleDeleteChatbot = (chatbot: Chatbot) => {
+    setPendingDelete(chatbot)
+  }
 
-        // For now, just remove from state
-        setChatbots(chatbots.filter((b) => b.id !== chatbot.id))
-        toast.success(`${chatbot.name} has been deleted`)
-      } catch (error) {
-        console.error("Failed to delete chatbot:", error)
-        toast.error("Failed to delete chatbot")
-      }
+  const performDeleteChatbot = async () => {
+    if (!pendingDelete) return
+    try {
+      await ChatbotService.deleteChatbot(pendingDelete.id)
+      setChatbots(chatbots.filter((b) => b.id !== pendingDelete.id))
+      toast.success(`${pendingDelete.name} deleted`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            await ChatbotService.updateChatbot(pendingDelete.id, { is_deleted: false })
+            await fetchChatbots() //  Reload from backend after undo
+          },
+        },
+      })
+    } catch (error) {
+      toast.error("Failed to delete chatbot")
+    } finally {
+      setPendingDelete(null)
     }
   }
+  
 
   if (loading) {
     return <LoadingScreen fullScreen={false} message="Loading chatbots..." />
@@ -93,6 +107,21 @@ export default function ChatbotsPage() {
           ))}
         </div>
       )}
+      <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+
+    <DialogContent>
+      <DialogTitle>Confirm Deletion</DialogTitle>
+      <p className="text-sm">
+        Are you sure you want to delete <strong>{pendingDelete?.name}</strong>?
+      </p>
+      <DialogFooter>
+        <Button variant="ghost" onClick={() => setPendingDelete(null)}>Cancel</Button>
+        <Button variant="destructive" onClick={performDeleteChatbot}>Delete</Button>
+      </DialogFooter>
+    </DialogContent>
+
+  </Dialog>
+
     </div>
   )
 }

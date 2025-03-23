@@ -41,6 +41,11 @@ export const ChatbotService = {
     return response.data
   },
 
+  // Delete a chatbot
+  deleteChatbot: async (id: number): Promise<void> => {
+    await API.delete(`/chatbot/chatbots/${id}/`)
+  },
+
   // Start a new chat session
   startSession: async (chatbotId: number): Promise<ChatSession> => {
     const response = await API.post("/chatbot/sessions/start/", { chatbot_id: chatbotId })
@@ -53,4 +58,7 @@ export const ChatbotService = {
     return response.data
   },
 }
+
+
+
 
