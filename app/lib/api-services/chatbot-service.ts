@@ -23,54 +23,86 @@ export interface ChatMessage {
 }
 
 export const ChatbotService = {
-  // Get all chatbots for the current organization
   getChatbots: async (): Promise<Chatbot[]> => {
     const response = await API.get("/chatbot/chatbots")
     return response.data
   },
 
-  // Create a new chatbot
+  getChatbot: async (id: number): Promise<Chatbot> => {
+    const response = await API.get(`/chatbot/chatbots/${id}/`)
+    return response.data
+  },
+
   createChatbot: async (chatbot: Partial<Chatbot>): Promise<Chatbot> => {
     const response = await API.post("/chatbot/chatbots/", chatbot)
     return response.data
   },
 
-  // Update an existing chatbot
   updateChatbot: async (id: number, chatbot: Partial<Chatbot>): Promise<Chatbot> => {
     const response = await API.put(`/chatbot/chatbots/${id}/`, chatbot)
     return response.data
   },
 
-  // Delete a chatbot
   deleteChatbot: async (id: number): Promise<void> => {
     await API.delete(`/chatbot/chatbots/${id}/`)
   },
 
-  // Start a new chat session
   startSession: async (chatbotId: number): Promise<ChatSession> => {
     const response = await API.post("/chatbot/sessions/start/", { chatbot_id: chatbotId })
     return response.data
   },
 
-  // Send a message in a chat session
   sendMessage: async (sessionId: string, message: string): Promise<{ reply: string }> => {
     const response = await API.post(`/chatbot/sessions/${sessionId}/message/`, { message })
     return response.data
   },
 
-  getSession: async (sessionId: string) => {
+  getSession: async (sessionId: string): Promise<{ session_id: string; messages: ChatMessage[] }> => {
     const response = await API.get(`/chatbot/sessions/${sessionId}/`)
     return response.data
   },
 
-  // Get chatbot analytics
   getAnalytics: async (chatbotId: number): Promise<any> => {
     const response = await API.get(`/chatbot/analytics/${chatbotId}/`)
     return response.data
   },
 
+  trainChatbot: async (id: number): Promise<void> => {
+    await API.post(`/knowledge/train/${id}/`)
+  },
 
+
+
+  uploadFile: async (chatbotId: number, file: File): Promise<void> => {
+    const formData = new FormData()
+    formData.append("chatbot", chatbotId.toString())
+    formData.append("source_type", "upload")
+    formData.append("title", file.name)
+    formData.append("file", file)
+  
+    const res = await API.post("/knowledge/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+  
+    if (res.status !== 201) {
+      const errorText = res.data
+      console.error("Upload failed:", errorText)
+      throw new Error(`Failed to upload: ${file.name}`)
+    }
+  },
+
+  getKnowledge: async (chatbotId: number): Promise<any[]> => {
+    const response = await API.get(`/knowledge/?chatbot=${chatbotId}`)
+    return response.data
+  }
+  
+  
+  
+  
 }
+
 
 
 

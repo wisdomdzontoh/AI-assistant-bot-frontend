@@ -1,19 +1,23 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { Upload, File, X } from "lucide-react"
+import { Upload, File, X, Loader2 } from "lucide-react"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
 
-export function FileUploader() {
+interface FileUploaderProps {
+  chatbotId: number
+}
+
+export function FileUploader({ chatbotId }: FileUploaderProps) {
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       setFiles((prev) => [...prev, ...newFiles])
       toast.success(`${newFiles.length} file(s) added`)
@@ -25,15 +29,12 @@ export function FileUploader() {
     setIsDragging(true)
   }
 
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
+  const handleDragLeave = () => setIsDragging(false)
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files) {
       const newFiles = Array.from(e.dataTransfer.files)
       setFiles((prev) => [...prev, ...newFiles])
       toast.success(`${newFiles.length} file(s) added`)
@@ -44,10 +45,26 @@ export function FileUploader() {
     setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const uploadFiles = () => {
-    // Simulate upload
-    toast.success(`${files.length} file(s) uploaded successfully`)
-    setFiles([])
+  const uploadFiles = async () => {
+    if (!chatbotId) {
+      toast.error("Chatbot ID is missing.")
+      return
+    }
+
+    setUploading(true)
+    try {
+      for (const file of files) {
+        await ChatbotService.uploadFile(chatbotId, file)
+      }
+
+      toast.success(`${files.length} file(s) uploaded successfully`)
+      setFiles([])
+    } catch (err) {
+      console.error(err)
+      toast.error("Upload failed. Please try again.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -62,7 +79,7 @@ export function FileUploader() {
       >
         <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-medium mb-1">Drag and drop files here</h3>
-        <p className="text-sm text-muted-foreground mb-4">Support for PDF, DOCX, TXT, and other text-based files</p>
+        <p className="text-sm text-muted-foreground mb-4">PDF, DOCX, TXT, etc.</p>
         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
           Browse Files
         </Button>
@@ -93,12 +110,20 @@ export function FileUploader() {
               </div>
             ))}
           </div>
-          <Button onClick={uploadFiles} className="w-full">
-            Upload {files.length} File{files.length !== 1 ? "s" : ""}
+          <Button onClick={uploadFiles} disabled={uploading} className="w-full">
+            {uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                Upload {files.length} File{files.length !== 1 ? "s" : ""}
+              </>
+            )}
           </Button>
         </div>
       )}
     </div>
   )
 }
-

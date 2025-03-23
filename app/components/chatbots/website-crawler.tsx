@@ -9,7 +9,10 @@ import { Globe, Loader2 } from "lucide-react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import {
+  Form, FormControl, FormDescription, FormField, FormItem,
+  FormLabel, FormMessage
+} from "@/components/ui/form"
 
 const formSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL" }),
@@ -18,7 +21,11 @@ const formSchema = z.object({
   followExternalLinks: z.boolean().default(false),
 })
 
-export function WebsiteCrawler() {
+interface WebsiteCrawlerProps {
+  chatbotId: number
+}
+
+export function WebsiteCrawler({ chatbotId }: WebsiteCrawlerProps) {
   const [crawling, setCrawling] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -31,17 +38,35 @@ export function WebsiteCrawler() {
     },
   })
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setCrawling(true)
-
-    // Simulate crawling
     toast.info(`Starting to crawl ${values.url}`)
 
-    setTimeout(() => {
-      setCrawling(false)
-      toast.success(`Successfully crawled ${Math.floor(Math.random() * values.maxPages) + 1} pages from ${values.url}`)
+    try {
+      const res = await fetch("/api/knowledge/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatbot: chatbotId,
+          source_type: "url",
+          title: values.url,
+          url: values.url,
+          content: "", // Will be crawled in the background
+          keywords: "",
+        }),
+      })
+
+      if (!res.ok) throw new Error("Crawling failed")
+
+      toast.success(`Submitted ${values.url} for crawling.`)
       form.reset()
-    }, 3000)
+    } catch (error) {
+      toast.error("Failed to start crawling. Please try again.")
+    } finally {
+      setCrawling(false)
+    }
   }
 
   return (
@@ -77,10 +102,10 @@ export function WebsiteCrawler() {
                   min={1}
                   max={100}
                   {...field}
-                  onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
                 />
               </FormControl>
-              <FormDescription>Limit the number of pages to crawl (1-100)</FormDescription>
+              <FormDescription>Limit the number of pages to crawl (1–100)</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -99,7 +124,6 @@ export function WebsiteCrawler() {
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="followExternalLinks"
@@ -128,4 +152,3 @@ export function WebsiteCrawler() {
     </Form>
   )
 }
-

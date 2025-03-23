@@ -1,63 +1,62 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { toast } from "sonner"
 import { Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import {
+  Form, FormControl, FormDescription, FormField, FormItem,
+  FormLabel, FormMessage
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import {
+  Card, CardContent, CardDescription,
+  CardFooter, CardHeader, CardTitle
+} from "@/components/ui/card"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
 
 interface ChatbotSettingsProps {
   id: string
 }
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Chatbot name must be at least 2 characters.",
-  }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }),
-  welcomeMessage: z.string().min(5, {
-    message: "Welcome message must be at least 5 characters.",
-  }),
+  name: z.string().min(2),
+  description: z.string().min(10),
+  welcomeMessage: z.string().min(5),
   persona: z.string(),
-  primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, {
-    message: "Please enter a valid hex color code.",
-  }),
-  enableHumanHandoff: z.boolean().default(true),
-  enableFeedback: z.boolean().default(true),
-  enableAttachments: z.boolean().default(false),
+  primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
+  enableHumanHandoff: z.boolean(),
+  enableFeedback: z.boolean(),
+  enableAttachments: z.boolean(),
   maxResponseTokens: z.number().min(100).max(4000),
 })
 
+type ChatbotSettingsFormValues = z.infer<typeof formSchema>
+
 export function ChatbotSettings({ id }: ChatbotSettingsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ChatbotSettingsFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "Customer Support Bot",
-      description: "Handles common customer inquiries and support requests",
-      welcomeMessage: "Hello! How can I help you today?",
+      name: "",
+      description: "",
+      welcomeMessage: "",
       persona: "professional",
       primaryColor: "#3B82F6",
       enableHumanHandoff: true,
@@ -67,16 +66,51 @@ export function ChatbotSettings({ id }: ChatbotSettingsProps) {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  // Load chatbot data
+  useEffect(() => {
+    const loadChatbot = async () => {
+      try {
+        const data = await ChatbotService.getChatbot(Number(id))
+        form.reset({
+          name: data.name,
+          description: data.description,
+          welcomeMessage: data.welcome_message,
+          persona: data.persona,
+          primaryColor: data.primary_color,
+          enableHumanHandoff: data.enable_human_handoff,
+          enableFeedback: data.enable_feedback,
+          enableAttachments: data.enable_attachments,
+          maxResponseTokens: data.max_response_tokens || 1000,
+        })
+      } catch (err) {
+        toast.error("Failed to load chatbot")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadChatbot()
+  }, [id, form])
+
+  const onSubmit = async (values: ChatbotSettingsFormValues) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      // const response = await API.put(`/chatbots/${id}/`, values)
+      await ChatbotService.updateChatbot(Number(id), {
+        name: values.name,
+        description: values.description,
+        welcome_message: values.welcomeMessage,
+        persona: values.persona,
+        primary_color: values.primaryColor,
+        enable_feedback: values.enableFeedback,
+        enable_human_handoff: values.enableHumanHandoff,
+        enable_attachments: values.enableAttachments,
+        max_response_tokens: values.maxResponseTokens,
+        is_active: true,
+      })
       toast.success("Chatbot settings updated successfully!")
-    } catch (error) {
-      console.error("Error updating chatbot:", error)
-      toast.error("Failed to update chatbot settings. Please try again.")
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to update chatbot settings.")
     } finally {
       setIsSubmitting(false)
     }
@@ -84,22 +118,20 @@ export function ChatbotSettings({ id }: ChatbotSettingsProps) {
 
   const handleDelete = async () => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      // const response = await API.delete(`/chatbots/${id}/`)
+      await ChatbotService.deleteChatbot(Number(id))
       toast.success("Chatbot deleted successfully!")
-      // router.push('/dashboard/chatbots')
     } catch (error) {
-      console.error("Error deleting chatbot:", error)
-      toast.error("Failed to delete chatbot. Please try again.")
+      toast.error("Failed to delete chatbot")
     }
   }
+
+  if (isLoading) return <p className="text-muted-foreground">Loading settings...</p>
 
   return (
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
+        <Card>
             <CardHeader>
               <CardTitle>Basic Settings</CardTitle>
               <CardDescription>Configure the basic settings for your chatbot</CardDescription>

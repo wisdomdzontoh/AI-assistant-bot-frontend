@@ -1,26 +1,55 @@
-import type { Metadata } from "next"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ChatbotOverview from "../../../components/chatbots/chatbot-overview"
 import { ChatbotSettings } from "../../../components/chatbots/chatbot-settings"
 import { ChatbotTraining } from "../../../components/chatbots/chatbot-training"
 import { ChatbotAnalytics } from "../../../components/chatbots/chatbot-analytics"
-import { ArrowLeft } from "lucide-react"
-//import { type PageProps } from "@/types/next" // You can define this yourself (see below) or use inline
+import ChatbotOverview from "../../../components/chatbots/chatbot-overview"
+import { ArrowLeft, Loader2 } from "lucide-react"
+import { ChatbotService, Chatbot } from "@/app/lib/api-services/chatbot-service"
+import { toast } from "sonner"
 
-export const metadata: Metadata = {
-  title: "Chatbot Details - ChatWise",
-  description: "Manage and configure your AI chatbot",
-}
 
-type Props = {
-  params: {
-    id: string
+
+export default function ChatbotDetailPage() {
+  const params = useParams()
+  const chatbotId = params?.id as string
+
+  const [chatbot, setChatbot] = useState<Chatbot | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchChatbot = async () => {
+      try {
+        const data = await ChatbotService.getChatbot(Number(chatbotId))
+        setChatbot(data)
+      } catch (err) {
+        toast.error("Failed to load chatbot")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchChatbot()
+  }, [chatbotId])
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <Loader2 className="animate-spin h-4 w-4" />
+        Loading chatbot...
+      </div>
+    )
   }
-}
 
-export default function ChatbotDetailPage({ params }: Props) {
+  if (!chatbot) {
+    return <p className="text-red-500 text-sm">Chatbot not found.</p>
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -31,8 +60,8 @@ export default function ChatbotDetailPage({ params }: Props) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customer Support Bot</h1>
-          <p className="text-muted-foreground">Manage and configure your AI assistant</p>
+          <h1 className="text-3xl font-bold tracking-tight">{chatbot.name}</h1>
+          <p className="text-muted-foreground">{chatbot.description}</p>
         </div>
       </div>
 
@@ -45,19 +74,24 @@ export default function ChatbotDetailPage({ params }: Props) {
         </TabsList>
 
         <TabsContent value="overview">
-          <ChatbotOverview id={params.id} name="Chatbot Name" description="Chatbot Description" status="active" />
+          <ChatbotOverview
+            id={chatbotId}
+            name={chatbot.name}
+            description={chatbot.description ?? ""}
+            status={chatbot.is_active ? "active" : "inactive"}
+          />
         </TabsContent>
 
         <TabsContent value="training">
-          <ChatbotTraining id={params.id} />
+          <ChatbotTraining id={chatbotId} />
         </TabsContent>
 
         <TabsContent value="analytics">
-          <ChatbotAnalytics id={params.id} />
+          <ChatbotAnalytics id={chatbotId} />
         </TabsContent>
 
         <TabsContent value="settings">
-          <ChatbotSettings id={params.id} />
+          <ChatbotSettings id={chatbotId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,44 +1,74 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { FileUploader } from "../../components/chatbots/file-uploader"
 import { WebsiteCrawler } from "../../components/chatbots/website-crawler"
 import { toast } from "sonner"
 import { FileText, Globe, MessageSquare, Plus, RefreshCw, Trash2 } from "lucide-react"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
+
+
+
 
 interface ChatbotTrainingProps {
   id: string
 }
 
 export function ChatbotTraining({ id }: ChatbotTrainingProps) {
+  const chatbotId = Number(id)
   const [trainingInProgress, setTrainingInProgress] = useState(false)
   const [trainingProgress, setTrainingProgress] = useState(0)
+  const [knowledge, setKnowledge] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const startTraining = () => {
+  const fetchKnowledge = async () => {
+    try {
+      setLoading(true)
+      const data = await ChatbotService.getKnowledge(chatbotId)
+      setKnowledge(data)
+    } catch (err) {
+      toast.error("Failed to fetch knowledge base")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchKnowledge()
+  }, [chatbotId])
+
+  const startTraining = async () => {
     setTrainingInProgress(true)
     setTrainingProgress(0)
 
-    // Simulate training progress
-    const interval = setInterval(() => {
-      setTrainingProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setTrainingInProgress(false)
-          toast.success("Training completed successfully!")
-          return 100
-        }
-        return prev + 10
-      })
-    }, 800)
+    try {
+      await ChatbotService.trainChatbot(chatbotId)
+
+      const interval = setInterval(() => {
+        setTrainingProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval)
+            setTrainingInProgress(false)
+            toast.success("Training completed successfully!")
+            fetchKnowledge()
+            return 100
+          }
+          return prev + 10
+        })
+      }, 500)
+    } catch (error) {
+      toast.error("Training failed. Please try again.")
+      setTrainingInProgress(false)
+    }
   }
+
+  const documents = knowledge.filter((k) => k.source_type === "upload")
+  const websites = knowledge.filter((k) => k.source_type === "url")
 
   return (
     <div className="space-y-6">
@@ -52,7 +82,7 @@ export function ChatbotTraining({ id }: ChatbotTrainingProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Training Status</p>
-                <p className="text-sm text-muted-foreground">Last trained: 2 days ago</p>
+                <p className="text-sm text-muted-foreground">Triggered manually</p>
               </div>
               <Badge
                 variant={trainingInProgress ? "secondary" : "outline"}
@@ -86,34 +116,29 @@ export function ChatbotTraining({ id }: ChatbotTrainingProps) {
         <TabsList>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="websites">Websites</TabsTrigger>
-          <TabsTrigger value="custom">Custom Content</TabsTrigger>
-          <TabsTrigger value="qa">Q&A Pairs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents">
           <Card>
             <CardHeader>
-              <CardTitle>Document Training</CardTitle>
-              <CardDescription>Upload documents to train your chatbot</CardDescription>
+              <CardTitle>Uploaded Documents</CardTitle>
+              <CardDescription>Train your chatbot using PDFs, DOCs, or text files</CardDescription>
             </CardHeader>
             <CardContent>
-              <FileUploader />
-
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-3">Uploaded Documents</h3>
-                <div className="space-y-3">
-                  {["Product Manual.pdf", "FAQ Document.docx", "Technical Specifications.pdf"].map((doc, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <span>{doc}</span>
-                      </div>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              <FileUploader chatbotId={chatbotId} />
+              <div className="mt-6 space-y-3">
+                {documents.length === 0 && <p className="text-muted-foreground text-sm">No documents yet.</p>}
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <span>{doc.title}</span>
                     </div>
-                  ))}
-                </div>
+                    <Badge variant="outline">
+                      {doc.embedded ? "✅ Trained" : "❌ Not Trained"}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -122,136 +147,24 @@ export function ChatbotTraining({ id }: ChatbotTrainingProps) {
         <TabsContent value="websites">
           <Card>
             <CardHeader>
-              <CardTitle>Website Crawling</CardTitle>
-              <CardDescription>Train your chatbot by crawling website content</CardDescription>
+              <CardTitle>Crawled Websites</CardTitle>
+              <CardDescription>Train your chatbot by crawling public URLs</CardDescription>
             </CardHeader>
             <CardContent>
-              <WebsiteCrawler />
-
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-3">Crawled Websites</h3>
-                <div className="space-y-3">
-                  {["https://example.com/support", "https://example.com/faq"].map((url, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-muted-foreground" />
-                        <span>{url}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">12 pages</Badge>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              <WebsiteCrawler chatbotId={chatbotId} />
+              <div className="mt-6 space-y-3">
+                {websites.length === 0 && <p className="text-muted-foreground text-sm">No crawled URLs yet.</p>}
+                {websites.map((site) => (
+                  <div key={site.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-muted-foreground" />
+                      <span>{site.title}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="custom">
-          <Card>
-            <CardHeader>
-              <CardTitle>Custom Content</CardTitle>
-              <CardDescription>Add custom text content for training</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="content-title">Content Title</Label>
-                  <Input id="content-title" placeholder="e.g. Refund Policy" className="mt-1" />
-                </div>
-
-                <div>
-                  <Label htmlFor="content-text">Content</Label>
-                  <Textarea
-                    id="content-text"
-                    placeholder="Enter your custom content here..."
-                    className="mt-1 min-h-[200px]"
-                  />
-                </div>
-
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Content
-                </Button>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-3">Saved Content</h3>
-                <div className="space-y-3">
-                  {["Refund Policy", "Shipping Information", "Privacy Policy"].map((title, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                        <span>{title}</span>
-                      </div>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="qa">
-          <Card>
-            <CardHeader>
-              <CardTitle>Q&A Pairs</CardTitle>
-              <CardDescription>Define specific question and answer pairs for your chatbot</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="question">Question</Label>
-                  <Input id="question" placeholder="e.g. What is your return policy?" className="mt-1" />
-                </div>
-
-                <div>
-                  <Label htmlFor="answer">Answer</Label>
-                  <Textarea
-                    id="answer"
-                    placeholder="e.g. Our return policy allows returns within 30 days of purchase..."
-                    className="mt-1 min-h-[150px]"
-                  />
-                </div>
-
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Q&A Pair
-                </Button>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-3">Saved Q&A Pairs</h3>
-                <div className="space-y-3">
-                  {["What is your return policy?", "How do I track my order?", "Do you ship internationally?"].map(
-                    (question, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{question}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                            {
-                              [
-                                "Our return policy allows returns within 30 days of purchase with original receipt.",
-                                "You can track your order by logging into your account or using the tracking number in your confirmation email.",
-                                "Yes, we ship to most countries worldwide. Shipping costs and delivery times vary by location.",
-                              ][i]
-                            }
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ),
-                  )}
-                </div>
+                    <Badge variant="outline">
+                      {site.embedded ? "✅ Trained" : "❌ Not Trained"}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -260,4 +173,3 @@ export function ChatbotTraining({ id }: ChatbotTrainingProps) {
     </div>
   )
 }
-
