@@ -39,6 +39,12 @@ export function MobileSidebar() {
       variant: "default",
     },
     {
+      title: "Conversations",
+      icon: MessageSquare,
+      href: "/dashboard/conversations",
+      variant: "default",
+    },
+    {
       title: "Knowledge Base",
       icon: FileText,
       href: "/dashboard/knowledge-base",

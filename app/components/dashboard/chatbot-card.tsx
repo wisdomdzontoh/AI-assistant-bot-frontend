@@ -57,7 +57,9 @@ export function ChatbotCard({ chatbot, onEdit, onDelete }: ChatbotCardProps) {
               <DropdownMenuItem asChild>
                 <Link href={`/dashboard/chatbots/${chatbot.id}/test`}>Test chatbot</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>View analytics</DropdownMenuItem>
+              <DropdownMenuItem>
+              <Link href={`/dashboard/chatbots/${chatbot.id}`}>View analytics</Link>
+                </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete?.(chatbot)}>
                 Delete chatbot

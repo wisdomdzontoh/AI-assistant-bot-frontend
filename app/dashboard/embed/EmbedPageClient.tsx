@@ -1,20 +1,30 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, Check, ExternalLink } from "lucide-react"
-import { useState } from "react"
+import { WidgetPreview } from "../../components/chatbots/widget-preview"
 
 export default function EmbedPageClient() {
+  const [showPreview, setShowPreview] = useState(false)
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Embed Your Chatbot</h1>
-        <p className="text-muted-foreground">Add your AI assistant to your website with a simple code snippet</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Embed Your Chatbot</h1>
+          <p className="text-muted-foreground">Add your AI assistant to your website with a simple code snippet</p>
+        </div>
+        <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
+          {showPreview ? "Hide Preview" : "Show Preview"}
+        </Button>
       </div>
 
       <EmbedCodeTabs />
+
+      {showPreview && <WidgetPreview />}
     </div>
   )
 }
