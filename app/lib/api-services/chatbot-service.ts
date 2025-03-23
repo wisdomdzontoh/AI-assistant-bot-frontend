@@ -57,7 +57,22 @@ export const ChatbotService = {
     const response = await API.post(`/chatbot/sessions/${sessionId}/message/`, { message })
     return response.data
   },
+
+  getSession: async (sessionId: string) => {
+    const response = await API.get(`/chatbot/sessions/${sessionId}/`)
+    return response.data
+  },
+
+  // Get chatbot analytics
+  getAnalytics: async (chatbotId: number): Promise<any> => {
+    const response = await API.get(`/chatbot/analytics/${chatbotId}/`)
+    return response.data
+  },
+
+
 }
+
+
 
 
 

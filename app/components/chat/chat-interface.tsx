@@ -27,26 +27,41 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
   useEffect(() => {
     const initSession = async () => {
       try {
-        const session = await ChatbotService.startSession(chatbotId)
-        setSessionId(session.session_id)
-
-        // Add welcome message
-        setMessages([
-          {
-            sender: "bot",
-            content: `Hello! I'm ${chatbotName}. How can I help you today?`,
-          },
-        ])
+        const storageKey = `chatbot_session_${chatbotId}`
+        const existingSessionId = localStorage.getItem(storageKey)
+  
+        let session_id = existingSessionId
+  
+        if (!session_id) {
+          // Start a new session if none is stored
+          const session = await ChatbotService.startSession(chatbotId)
+          session_id = session.session_id
+          localStorage.setItem(storageKey, session_id)
+        }
+  
+        setSessionId(session_id)
+  
+        // Load chat history
+        const fullSession = await ChatbotService.getSession(session_id)
+        const formattedMessages: ChatMessage[] = fullSession.messages.map((m: any) => ({
+          sender: m.sender,
+          content: m.content,
+          created_at: m.created_at,
+        }))
+  
+        setMessages(formattedMessages)
       } catch (error) {
-        console.error("Failed to start chat session:", error)
-        toast.error("Failed to start chat session")
+        console.error("Failed to initialize chat session:", error)
+        toast.error("Failed to start or load chat session")
       } finally {
         setInitializing(false)
       }
     }
-
+  
     initSession()
-  }, [chatbotId, chatbotName])
+  }, [chatbotId])
+  
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -78,7 +93,7 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
 
       setMessages((prev) => [...prev, botMessage])
     } catch (error) {
-      console.error("Failed to send message:", error)
+      //console.error("Failed to send message:", error)
       toast.error("Failed to get a response")
 
       // Add error message
