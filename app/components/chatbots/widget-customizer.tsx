@@ -34,7 +34,7 @@ export function WidgetCustomizer() {
     chatbotName: "ChatWise Assistant",
     welcomeMessage: "Hello! How can I help you today?",
     primaryColor: "#3B82F6",
-    position: "right" as const,
+    position: "right" as "right" | "left",
   })
 
   const form = useForm<z.infer<typeof formSchema>>({
