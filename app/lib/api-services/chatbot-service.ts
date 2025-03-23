@@ -93,10 +93,50 @@ export const ChatbotService = {
     }
   },
 
-  getKnowledge: async (chatbotId: number): Promise<any[]> => {
-    const response = await API.get(`/knowledge/?chatbot=${chatbotId}`)
+  getKnowledge: async (chatbotId: number, page = 1): Promise<{ results: any[], count: number }> => {
+    const response = await API.get(`/knowledge/?chatbot=${chatbotId}&page=${page}`)
     return response.data
-  }
+  },
+
+  deleteKnowledge: async (id: number): Promise<void> => {
+    await API.delete(`/knowledge/${id}/`)
+  },
+
+
+  crawlWebsite: async (chatbotId: number, values: {
+    url: string;
+    maxPages: number;
+    includeSubdomains: boolean;
+    followExternalLinks: boolean;
+  }): Promise<void> => {
+    const response = await fetch("/api/knowledge/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chatbot: chatbotId,
+        source_type: "url",
+        title: values.url,
+        url: values.url,
+        metadata: {
+          max_pages: values.maxPages,
+          include_subdomains: values.includeSubdomains,
+          follow_external_links: values.followExternalLinks,
+        },
+        content: "",
+        keywords: "",
+      }),
+    })
+  
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText)
+    }
+  },
+  
+  
+  
+  
+  
   
   
   

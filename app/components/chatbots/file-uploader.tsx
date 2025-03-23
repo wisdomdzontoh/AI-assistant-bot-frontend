@@ -10,12 +10,14 @@ interface FileUploaderProps {
   chatbotId: number
 }
 
-export function FileUploader({ chatbotId }: FileUploaderProps) {
+export function FileUploader({ chatbotId, onUploadSuccess }: { chatbotId: number; onUploadSuccess: () => void }) {
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
@@ -56,9 +58,11 @@ export function FileUploader({ chatbotId }: FileUploaderProps) {
       for (const file of files) {
         await ChatbotService.uploadFile(chatbotId, file)
       }
+      
 
       toast.success(`${files.length} file(s) uploaded successfully`)
       setFiles([])
+      onUploadSuccess?.() // ✅ refresh knowledge
     } catch (err) {
       console.error(err)
       toast.error("Upload failed. Please try again.")

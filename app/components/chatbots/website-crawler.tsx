@@ -1,18 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "sonner"
-import { Globe, Loader2 } from "lucide-react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { Globe, Loader2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form, FormControl, FormDescription, FormField, FormItem,
   FormLabel, FormMessage
 } from "@/components/ui/form"
+
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
 
 const formSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL" }),
@@ -23,9 +26,10 @@ const formSchema = z.object({
 
 interface WebsiteCrawlerProps {
   chatbotId: number
+  onCrawlSuccess?: () => void
 }
 
-export function WebsiteCrawler({ chatbotId }: WebsiteCrawlerProps) {
+export function WebsiteCrawler({ chatbotId, onCrawlSuccess }: WebsiteCrawlerProps) {
   const [crawling, setCrawling] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -40,30 +44,16 @@ export function WebsiteCrawler({ chatbotId }: WebsiteCrawlerProps) {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setCrawling(true)
-    toast.info(`Starting to crawl ${values.url}`)
+    toast.info(`Submitting ${values.url} for crawling...`)
 
     try {
-      const res = await fetch("/api/knowledge/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          chatbot: chatbotId,
-          source_type: "url",
-          title: values.url,
-          url: values.url,
-          content: "", // Will be crawled in the background
-          keywords: "",
-        }),
-      })
-
-      if (!res.ok) throw new Error("Crawling failed")
-
-      toast.success(`Submitted ${values.url} for crawling.`)
+      await ChatbotService.crawlWebsite(chatbotId, values)
+      toast.success("Crawling job started.")
       form.reset()
-    } catch (error) {
-      toast.error("Failed to start crawling. Please try again.")
+      onCrawlSuccess?.()
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || "Crawl request failed.")
     } finally {
       setCrawling(false)
     }
