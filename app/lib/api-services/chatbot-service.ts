@@ -103,35 +103,40 @@ export const ChatbotService = {
   },
 
 
-  crawlWebsite: async (chatbotId: number, values: {
-    url: string;
-    maxPages: number;
-    includeSubdomains: boolean;
-    followExternalLinks: boolean;
-  }): Promise<void> => {
-    const response = await fetch("/api/knowledge/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chatbot: chatbotId,
-        source_type: "url",
-        title: values.url,
-        url: values.url,
-        metadata: {
-          max_pages: values.maxPages,
-          include_subdomains: values.includeSubdomains,
-          follow_external_links: values.followExternalLinks,
-        },
-        content: "",
-        keywords: "",
-      }),
+  crawlWebsite: async (
+    chatbotId: number,
+    values: {
+      url: string;
+      maxPages: number;
+      includeSubdomains: boolean;
+      followExternalLinks: boolean;
+    }
+  ): Promise<void> => {
+    const payload = {
+      chatbot: chatbotId,
+      source_type: "url",
+      title: values.url,
+      url: values.url,
+      metadata: {
+        max_pages: values.maxPages,
+        include_subdomains: values.includeSubdomains,
+        follow_external_links: values.followExternalLinks,
+      },
+      content: "",
+      keywords: "",
+    }
+  
+    const response = await API.post("/knowledge/", payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
     })
   
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText)
+    if (response.status !== 201) {
+      throw new Error(response.statusText || "Failed to submit crawl job.")
     }
   },
+  
   
   
   

@@ -31,7 +31,9 @@ const ChatbotOverview: React.FC<ChatbotOverviewProps> = ({ id, name, description
           >
             {currentStatus === "active" ? "Deactivate" : "Activate"}
           </Button>
-          <Button variant="outline">Test Chatbot</Button>
+          <Button variant="outline">
+          <Link href={`/dashboard/chatbots/${id}/test`}>Test Chatbot</Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/dashboard/chatbots/${id}/widget`}>Customize Widget</Link>
           </Button>
