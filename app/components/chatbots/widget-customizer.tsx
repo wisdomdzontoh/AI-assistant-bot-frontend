@@ -1,36 +1,44 @@
 "use client"
 
-import { useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useEffect, useState } from "react"
 import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Form, FormControl, FormDescription, FormField, FormItem,
+  FormLabel, FormMessage
+} from "@/components/ui/form"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select"
+import {
+  Card, CardHeader, CardTitle, CardDescription, CardContent
+} from "@/components/ui/card"
 import { WidgetPreview } from "../../components/chatbots/widget-preview"
+import type { Chatbot } from "../../types"
 
 const formSchema = z.object({
-  chatbotName: z.string().min(2, {
-    message: "Chatbot name must be at least 2 characters.",
-  }),
-  welcomeMessage: z.string().min(5, {
-    message: "Welcome message must be at least 5 characters.",
-  }),
-  primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, {
-    message: "Please enter a valid hex color code.",
-  }),
-  position: z.enum(["right", "left"]),
-  showBranding: z.boolean().default(true),
-  enableAttachments: z.boolean().default(false),
-  enableFeedback: z.boolean().default(true),
+  widget_name: z.string().min(2),
+  widget_welcome: z.string().min(5),
+  widget_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, { message: "Invalid hex color code." }),
+  widget_position: z.enum(["right", "left"]),
+  widget_show_branding: z.boolean(),
+  widget_feedback: z.boolean(),
+  widget_attachments: z.boolean(),
 })
 
-export function WidgetCustomizer() {
-  const [previewSettings, setPreviewSettings] = useState({
+interface WidgetCustomizerProps {
+  chatbotId: number
+}
+
+export function WidgetCustomizer({ chatbotId }: WidgetCustomizerProps) {
+  const [preview, setPreview] = useState({
     chatbotName: "ChatWise Assistant",
     welcomeMessage: "Hello! How can I help you today?",
     primaryColor: "#3B82F6",
@@ -40,23 +48,51 @@ export function WidgetCustomizer() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      chatbotName: "ChatWise Assistant",
-      welcomeMessage: "Hello! How can I help you today?",
-      primaryColor: "#3B82F6",
-      position: "right",
-      showBranding: true,
-      enableAttachments: false,
-      enableFeedback: true,
+      widget_name: preview.chatbotName,
+      widget_welcome: preview.welcomeMessage,
+      widget_color: preview.primaryColor,
+      widget_position: preview.position,
+      widget_show_branding: true,
+      widget_feedback: true,
+      widget_attachments: false,
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setPreviewSettings({
-      chatbotName: values.chatbotName,
-      welcomeMessage: values.welcomeMessage,
-      primaryColor: values.primaryColor,
-      position: values.position,
-    })
+  // Load widget settings
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data: Chatbot = await ChatbotService.getChatbot(chatbotId)
+        form.reset(data)
+
+        setPreview({
+          chatbotName: data.widget_name,
+          welcomeMessage: data.widget_welcome,
+          primaryColor: data.widget_color,
+          position: data.widget_position,
+        })
+      } catch (err) {
+        toast.error("❌ Failed to load widget settings")
+      }
+    }
+
+    load()
+  }, [chatbotId, form])
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      await ChatbotService.updateWidgetSettings(chatbotId, values)
+      toast.success("✅ Widget settings saved")
+
+      setPreview({
+        chatbotName: values.widget_name,
+        welcomeMessage: values.widget_welcome,
+        primaryColor: values.widget_color,
+        position: values.widget_position,
+      })
+    } catch (err) {
+      toast.error("❌ Failed to save widget settings")
+    }
   }
 
   return (
@@ -64,21 +100,21 @@ export function WidgetCustomizer() {
       <Card>
         <CardHeader>
           <CardTitle>Widget Customization</CardTitle>
-          <CardDescription>Customize the appearance and behavior of your chat widget</CardDescription>
+          <CardDescription>Control your chat widget’s appearance and behavior</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="chatbotName"
+                name="widget_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Chatbot Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
-                    <FormDescription>The name displayed in the chat header</FormDescription>
+                    <FormDescription>This appears in the chat header</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -86,14 +122,14 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="welcomeMessage"
+                name="widget_welcome"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Welcome Message</FormLabel>
                     <FormControl>
                       <Textarea {...field} />
                     </FormControl>
-                    <FormDescription>The first message users will see</FormDescription>
+                    <FormDescription>Initial message shown to users</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -101,7 +137,7 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="primaryColor"
+                name="widget_color"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Primary Color</FormLabel>
@@ -111,7 +147,7 @@ export function WidgetCustomizer() {
                       </FormControl>
                       <Input type="color" value={field.value} onChange={field.onChange} className="w-12 h-10 p-1" />
                     </div>
-                    <FormDescription>The main color for your chat widget</FormDescription>
+                    <FormDescription>Accent color for the widget</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -119,14 +155,14 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="position"
+                name="widget_position"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Widget Position</FormLabel>
+                    <FormLabel>Position</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select position" />
+                          <SelectValue placeholder="Choose side" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -134,7 +170,6 @@ export function WidgetCustomizer() {
                         <SelectItem value="left">Bottom Left</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>Where the chat widget appears on your website</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -142,12 +177,12 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="showBranding"
+                name="widget_show_branding"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Show Branding</FormLabel>
-                      <FormDescription>Display "Powered by ChatWise" in the widget</FormDescription>
+                  <FormItem className="flex items-center justify-between p-4 border rounded-md">
+                    <div>
+                      <FormLabel>Show Branding</FormLabel>
+                      <FormDescription>Display “Powered by ChatWise”</FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -158,12 +193,12 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="enableAttachments"
+                name="widget_feedback"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">File Attachments</FormLabel>
-                      <FormDescription>Allow users to upload files</FormDescription>
+                  <FormItem className="flex items-center justify-between p-4 border rounded-md">
+                    <div>
+                      <FormLabel>User Feedback</FormLabel>
+                      <FormDescription>Allow thumbs up/down</FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -174,12 +209,12 @@ export function WidgetCustomizer() {
 
               <FormField
                 control={form.control}
-                name="enableFeedback"
+                name="widget_attachments"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">User Feedback</FormLabel>
-                      <FormDescription>Allow users to rate responses</FormDescription>
+                  <FormItem className="flex items-center justify-between p-4 border rounded-md">
+                    <div>
+                      <FormLabel>File Upload</FormLabel>
+                      <FormDescription>Allow users to send files</FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -188,7 +223,7 @@ export function WidgetCustomizer() {
                 )}
               />
 
-              <Button type="submit">Update Preview</Button>
+              <Button type="submit" className="w-full">Save Widget Settings</Button>
             </form>
           </Form>
         </CardContent>
@@ -196,22 +231,26 @@ export function WidgetCustomizer() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Widget Preview</CardTitle>
-          <CardDescription>See how your chat widget will appear on your website</CardDescription>
+          <CardTitle>Live Preview</CardTitle>
+          <CardDescription>Preview how the widget looks in real-time</CardDescription>
         </CardHeader>
-        <CardContent className="h-[500px] bg-gray-100 rounded-md relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-muted-foreground">Your website content</p>
+        <CardContent className="h-[500px] bg-gray-100 relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-muted-foreground">Website Preview</p>
           </div>
           <WidgetPreview
-            chatbotName={previewSettings.chatbotName}
-            welcomeMessage={previewSettings.welcomeMessage}
-            primaryColor={previewSettings.primaryColor}
-            position={previewSettings.position}
+            chatbotId={chatbotId}
+            chatbotName={preview.chatbotName}
+            welcomeMessage={preview.welcomeMessage}
+            primaryColor={preview.primaryColor}
+            position={preview.position}
+            showBranding={form.watch("widget_show_branding")}
+            allowFeedback={form.watch("widget_feedback")}
+            allowAttachments={form.watch("widget_attachments")}
           />
+
         </CardContent>
       </Card>
     </div>
   )
 }
-

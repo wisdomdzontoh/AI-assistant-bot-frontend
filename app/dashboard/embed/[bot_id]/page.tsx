@@ -1,6 +1,7 @@
 import React from 'react'
+import EmbedPageClient from '../EmbedPageClient';
 
 
 export default function EmbedBotPage({ params }: { params: { bot_id: string } }) {
-    return <div>Embedded Bot ID: {params.bot_id}</div>;
+    return <div><EmbedPageClient chatbotId={Number(params.bot_id)} /></div>;
   }

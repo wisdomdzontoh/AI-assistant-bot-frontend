@@ -20,7 +20,9 @@ export interface ChatMessage {
   sender: "user" | "bot"
   content: string
   created_at?: string
+  feedback?: "up" | "down" // 🆕 optional
 }
+
 
 export const ChatbotService = {
   getChatbots: async (): Promise<Chatbot[]> => {
@@ -28,8 +30,23 @@ export const ChatbotService = {
     return response.data
   },
 
+
   getChatbot: async (id: number): Promise<Chatbot> => {
-    const response = await API.get(`/chatbot/chatbots/${id}/`)
+    if (!id) throw new Error("Missing chatbot ID")
+  
+    try {
+      const response = await API.get(`/chatbot/chatbots/${id}/`)
+      return response.data
+    } catch (err: any) {
+      console.error("Failed to fetch chatbot:", err.response?.data || err.message)
+      throw new Error("Failed to load chatbot details")
+    }
+  },
+  
+
+  // Update chatbot widget settings
+  updateWidgetSettings: async (id: number, data: Partial<Chatbot>): Promise<Chatbot> => {
+    const response = await API.put(`/chatbot/chatbots/${id}/`, data)
     return response.data
   },
 
@@ -137,6 +154,15 @@ export const ChatbotService = {
     }
   },
   
+  getConversations: async (chatbotId: number): Promise<{
+    id: number
+    session_id: string
+    created_at: string
+    messages: ChatMessage[]
+  }[]> => {
+    const response = await API.get(`/chatbot/chatbots/${chatbotId}/conversations/`)
+    return response.data
+  },
   
   
   

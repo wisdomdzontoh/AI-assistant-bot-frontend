@@ -1,190 +1,195 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Bot, Send, X, Maximize2, Minimize2 } from "lucide-react"
+import { Bot, Send, X, Maximize2, Minimize2, ThumbsUp, ThumbsDown, Paperclip } from "lucide-react"
+import type { Chatbot } from "../../types"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
 
 interface WidgetPreviewProps {
-  chatbotName?: string
-  welcomeMessage?: string
-  primaryColor?: string
-  position?: "right" | "left"
+  chatbotId: number
+  chatbotName: string
+  welcomeMessage: string
+  primaryColor: string
+  position: "left" | "right"
+  showBranding?: boolean
+  allowFeedback?: boolean
+  allowAttachments?: boolean
 }
 
 export function WidgetPreview({
-  chatbotName = "ChatWise Assistant",
-  welcomeMessage = "Hello! How can I help you today?",
-  primaryColor = "#3B82F6",
-  position = "right",
+  chatbotId,
+  chatbotName,
+  welcomeMessage,
+  primaryColor,
+  position,
+  showBranding = true,
+  allowFeedback = true,
+  allowAttachments = false,
 }: WidgetPreviewProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [messages, setMessages] = useState([
-    {
-      id: "1",
-      role: "bot",
-      content: welcomeMessage,
-    },
-  ])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [attachment, setAttachment] = useState<File | null>(null)
+
+  const [messages, setMessages] = useState<{ id: string; role: "user" | "bot"; content: string }[]>([
+    { id: "init", role: "bot", content: welcomeMessage },
+  ])
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   const handleSendMessage = () => {
-    if (!input.trim()) return
+    if (!input.trim() && !attachment) return
 
-    // Add user message
-    const userMessage = {
+    const userMsg = {
       id: Date.now().toString(),
-      role: "user",
-      content: input,
+      role: "user" as const,
+      content: input || "[Sent a file]",
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    setMessages((prev) => [...prev, userMsg])
     setInput("")
-
-    // Simulate bot typing
+    setAttachment(null)
     setIsTyping(true)
 
-    // Simulate bot response
     setTimeout(() => {
-      setIsTyping(false)
-
-      const botResponses = [
-        "I'd be happy to help with that! Could you provide more details?",
-        "Thanks for your question. Based on the information you've provided, I recommend checking our documentation for more information.",
-        "I understand your concern. Let me look into this for you.",
-        "Great question! Here's what you need to know about that...",
-      ]
-
-      const botMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "bot",
-        content: botResponses[Math.floor(Math.random() * botResponses.length)],
+      const botMsg = {
+        id: Date.now().toString() + "-bot",
+        role: "bot" as const,
+        content: "Thanks! We'll get back to you shortly.",
       }
-
-      setMessages((prev) => [...prev, botMessage])
-    }, 1500)
-  }
-
-  const toggleChat = () => {
-    setIsOpen((prev) => !prev)
-  }
-
-  const toggleExpand = () => {
-    setIsExpanded((prev) => !prev)
+      setMessages((prev) => [...prev, botMsg])
+      setIsTyping(false)
+    }, 1000)
   }
 
   return (
     <div className={`fixed ${position === "right" ? "right-6" : "left-6"} bottom-6 z-50 flex flex-col items-end`}>
       {isOpen && (
         <div
-          className={`mb-4 rounded-lg shadow-lg overflow-hidden transition-all duration-300 ease-in-out ${
+          className={`mb-4 rounded-lg shadow-lg transition-all overflow-hidden flex flex-col justify-between ${
             isExpanded ? "w-[400px] h-[500px]" : "w-[350px] h-[450px]"
           }`}
           style={{ backgroundColor: "white" }}
         >
-          <div
-            className="flex items-center justify-between p-4"
-            style={{ backgroundColor: primaryColor, color: "white" }}
-          >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4" style={{ backgroundColor: primaryColor, color: "white" }}>
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder.svg" alt="Bot" />
+                <AvatarImage src="/placeholder.svg" />
                 <AvatarFallback>
                   <Bot className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
               <span className="font-medium">{chatbotName}</span>
             </div>
-            <div className="flex items-center">
-              <Button variant="ghost" size="icon" onClick={toggleExpand} className="text-white hover:bg-white/20">
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={() => setIsExpanded((p) => !p)} className="text-white hover:bg-white/20">
                 {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={toggleChat} className="text-white hover:bg-white/20">
+              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/20">
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-col h-[calc(100%-120px)] overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+          {/* Chat messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`rounded-lg p-3 max-w-[80%] ${
-                    message.role === "user" ? "rounded-tr-none text-white" : "rounded-tl-none bg-white border"
+                  className={`rounded-lg p-3 max-w-[80%] whitespace-pre-wrap ${
+                    msg.role === "user"
+                      ? "text-white rounded-tr-none"
+                      : "bg-white border rounded-tl-none"
                   }`}
-                  style={{
-                    backgroundColor: message.role === "user" ? primaryColor : "white",
-                  }}
+                  style={{ backgroundColor: msg.role === "user" ? primaryColor : "white" }}
                 >
-                  <p>{message.content}</p>
+                  {msg.content}
+                  {msg.role === "bot" && allowFeedback && (
+                    <div className="flex gap-1 mt-2">
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground">
+                        <ThumbsUp className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground">
+                        <ThumbsDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
 
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="rounded-lg rounded-tl-none p-3 bg-white border">
-                  <div className="flex space-x-1">
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
+              <div className="text-sm text-muted-foreground">Bot is typing...</div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t bg-white">
-            <div className="flex gap-2">
+          {/* Input area */}
+          <div className="p-4 border-t bg-white space-y-2">
+            {attachment && (
+              <div className="text-sm bg-muted p-2 rounded flex justify-between items-center">
+                <span>{attachment.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  onClick={() => setAttachment(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
               <Input
                 placeholder="Type your message..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                className="flex-1"
               />
-              <Button
-                size="icon"
-                onClick={handleSendMessage}
-                disabled={!input.trim() || isTyping}
-                style={{ backgroundColor: primaryColor }}
-              >
+              {allowAttachments && (
+                <label className="cursor-pointer">
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="file"
+                    hidden
+                    onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                  />
+                </label>
+              )}
+              <Button size="icon" onClick={handleSendMessage} disabled={!input.trim() && !attachment}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
+
+          {/* Branding */}
+          {showBranding && (
+            <div className="text-center text-xs text-muted-foreground py-2 bg-white border-t">
+              Powered by <span className="font-semibold">ChatWise</span>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Floating Button */}
       <Button
         size="icon"
         className="h-14 w-14 rounded-full shadow-lg"
-        onClick={toggleChat}
+        onClick={() => setIsOpen(true)}
         style={{ backgroundColor: primaryColor }}
       >
-        {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-6 w-6" />}
+        <Bot className="h-6 w-6 text-white" />
       </Button>
     </div>
   )
 }
-

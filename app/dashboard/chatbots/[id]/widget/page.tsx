@@ -10,6 +10,8 @@ export const metadata: Metadata = {
 }
 
 export default function WidgetCustomizationPage({ params }: { params: { id: string } }) {
+  const chatbotId = Number(params.id)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -25,8 +27,9 @@ export default function WidgetCustomizationPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      <WidgetCustomizer />
+      <WidgetCustomizer chatbotId={chatbotId} />
     </div>
   )
 }
+
 

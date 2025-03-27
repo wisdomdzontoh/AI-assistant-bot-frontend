@@ -16,7 +16,24 @@ export interface User {
     created_at: string;
     updated_at: string;
     is_deleted?: boolean;
-}
+
+ // 🆕 Widget Settings
+    widget_name: string;
+    widget_welcome?: string;
+    widget_color: string;
+    widget_position: "left" | "right";
+    widget_show_branding: boolean;
+    widget_feedback: boolean;
+    widget_attachments: boolean;
+  }
+
+  export interface WidgetPreviewProps {
+      chatbotId: number
+      chatbotName?: string
+      welcomeMessage?: string
+      primaryColor?: string
+      position?: "right" | "left"
+    }
   
   export interface KnowledgeBaseItem {
     id: number;

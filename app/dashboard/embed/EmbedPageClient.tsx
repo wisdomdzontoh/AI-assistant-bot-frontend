@@ -1,229 +1,189 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, Check, ExternalLink } from "lucide-react"
 import { WidgetPreview } from "../../components/chatbots/widget-preview"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
+import type { Chatbot } from "@/app/types"
 
-export default function EmbedPageClient() {
+export default function EmbedPageClient({ chatbotId }: { chatbotId: number }) {
   const [showPreview, setShowPreview] = useState(false)
+  const [copiedTab, setCopiedTab] = useState<string | null>(null)
+  const [chatbot, setChatbot] = useState<Chatbot | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await ChatbotService.getChatbot(chatbotId)
+        setChatbot(data)
+      } catch (err) {
+        console.error("Failed to fetch chatbot info", err)
+      }
+    }
+    fetchData()
+  }, [chatbotId])
+
+  const handleCopy = (code: string, tab: string) => {
+    navigator.clipboard.writeText(code)
+    setCopiedTab(tab)
+    setTimeout(() => setCopiedTab(null), 2000)
+  }
+
+  if (!chatbot) return <p>Loading chatbot info...</p>
+
+  const embedConfig = {
+    id: chatbot.id.toString(),
+    theme: {
+      primaryColor: chatbot.widget_color || "#3B82F6",
+      textColor: "#1F2937",
+      backgroundColor: "#FFFFFF",
+      buttonColor: chatbot.widget_color || "#3B82F6",
+    },
+    position: chatbot.widget_position,
+    greeting: chatbot.widget_welcome,
+    title: chatbot.widget_name,
+    avatar: "https://example.com/avatar.png", // or allow avatar uploads in the future
+  }
+
+  const scriptCode = `<script>
+(function(w,d,s,o,f,js,fjs){
+  w['ChatWise']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
+  w[o].l=1*new Date();js=d.createElement(s),fjs=d.getElementsByTagName(s)[0];
+  js.async=1;js.src=f;js.id=o;fjs.parentNode.insertBefore(js,fjs);
+}(window,document,'script','cw','https://cdn.chatwise.ai/widget.js'));
+cw('init', ${JSON.stringify(embedConfig, null, 2)});
+</script>`
+
+  const reactCode = `import { useEffect } from 'react'
+
+function ChatWiseWidget() {
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://cdn.chatwise.ai/widget.js'
+    script.async = true
+    script.onload = () => {
+      window.cw('init', ${JSON.stringify(embedConfig, null, 2)})
+    }
+    document.body.appendChild(script)
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
+  return null
+}
+
+export default ChatWiseWidget`
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Embed Your Chatbot</h1>
-          <p className="text-muted-foreground">Add your AI assistant to your website with a simple code snippet</p>
+          <h1 className="text-3xl font-bold">Embed Your Chatbot</h1>
+          <p className="text-muted-foreground">Copy the code below to add your chatbot to any website or React app</p>
         </div>
         <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
           {showPreview ? "Hide Preview" : "Show Preview"}
         </Button>
       </div>
 
-      <EmbedCodeTabs />
+      <Tabs defaultValue="script" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="script">HTML Script</TabsTrigger>
+          <TabsTrigger value="react">React Component</TabsTrigger>
+          <TabsTrigger value="config">Full Config JSON</TabsTrigger>
+        </TabsList>
 
-      {showPreview && <WidgetPreview />}
+        <TabsContent value="script">
+          <EmbedCard
+            title="HTML Script"
+            description="Embed this in your <head> or before </body> in any HTML page."
+            code={scriptCode}
+            copied={copiedTab === "script"}
+            onCopy={() => handleCopy(scriptCode, "script")}
+          />
+        </TabsContent>
+
+        <TabsContent value="react">
+          <EmbedCard
+            title="React Component"
+            description="Use this snippet in your React project."
+            code={reactCode}
+            copied={copiedTab === "react"}
+            onCopy={() => handleCopy(reactCode, "react")}
+          />
+        </TabsContent>
+
+        <TabsContent value="config">
+          <EmbedCard
+            title="Widget Config JSON"
+            description="Raw config object used by the JS SDK"
+            code={JSON.stringify(embedConfig, null, 2)}
+            copied={copiedTab === "config"}
+            onCopy={() => handleCopy(JSON.stringify(embedConfig, null, 2), "config")}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {showPreview && (
+        <div className="border rounded-lg bg-muted/30 p-4">
+          <WidgetPreview
+            chatbotId={chatbotId}
+            chatbotName={chatbot.widget_name}
+            welcomeMessage={chatbot.widget_welcome}
+            primaryColor={chatbot.widget_color || "#3B82F6"}
+            position={chatbot.widget_position}
+          />
+        </div>
+      )}
     </div>
   )
 }
 
-function EmbedCodeTabs() {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const scriptCode = `<script>
-  (function(w,d,s,o,f,js,fjs){
-    w['ChatWise']=o;w[o]=w[o]||function(){(w[o].q=w[o].q||[]).push(arguments)};
-    w[o].l=1*new Date();js=d.createElement(s),fjs=d.getElementsByTagName(s)[0];
-    js.async=1;js.src=f;js.id=o;fjs.parentNode.insertBefore(js,fjs);
-  }(window,document,'script','cw','https://cdn.chatwise.ai/widget.js'));
-  cw('init', { id: 'YOUR_CHATBOT_ID' });
-</script>`
-
-  const reactCode = `import { useEffect } from 'react';
-
-function ChatWiseWidget() {
-  useEffect(() => {
-    // Load ChatWise script
-    const script = document.createElement('script');
-    script.src = 'https://cdn.chatwise.ai/widget.js';
-    script.async = true;
-    script.onload = () => {
-      // Initialize the widget
-      window.cw('init', { id: 'YOUR_CHATBOT_ID' });
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      // Clean up
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  return null;
-}
-
-export default ChatWiseWidget;`
-
+function EmbedCard({
+  title,
+  description,
+  code,
+  copied,
+  onCopy,
+}: {
+  title: string
+  description: string
+  code: string
+  copied: boolean
+  onCopy: () => void
+}) {
   return (
-    <Tabs defaultValue="script" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="script">HTML Script</TabsTrigger>
-        <TabsTrigger value="react">React Component</TabsTrigger>
-        <TabsTrigger value="customize">Customization</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="script">
-        <Card>
-          <CardHeader>
-            <CardTitle>HTML Script Tag</CardTitle>
-            <CardDescription>Add this script to your website's HTML to embed your chatbot</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm">
-                <code>{scriptCode}</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 top-4"
-                onClick={() => handleCopy(scriptCode)}
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                <span className="sr-only">Copy code</span>
-              </Button>
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Replace <code className="text-primary">YOUR_CHATBOT_ID</code> with your actual chatbot ID.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Documentation
-            </Button>
-          </CardFooter>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="react">
-        <Card>
-          <CardHeader>
-            <CardTitle>React Component</CardTitle>
-            <CardDescription>Use this React component to add your chatbot to your React application</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm">
-                <code>{reactCode}</code>
-              </pre>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 top-4"
-                onClick={() => handleCopy(reactCode)}
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                <span className="sr-only">Copy code</span>
-              </Button>
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Import and use this component in your React application.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View React Documentation
-            </Button>
-          </CardFooter>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="customize">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customization Options</CardTitle>
-            <CardDescription>Customize the appearance and behavior of your chatbot</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm">
-              You can customize your chatbot by passing additional options to the init function:
-            </p>
-
-            <div className="relative">
-              <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm">
-                <code>{`cw('init', {
-  id: 'YOUR_CHATBOT_ID',
-  theme: {
-    primaryColor: '#3B82F6',
-    textColor: '#1F2937',
-    backgroundColor: '#FFFFFF',
-    buttonColor: '#3B82F6'
-  },
-  position: 'right', // 'right' or 'left'
-  greeting: 'Hello! How can I help you today?',
-  title: 'Chat with our AI Assistant',
-  avatar: 'https://example.com/avatar.png'
-});`}</code>
-              </pre>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border p-4">
-                <h3 className="font-medium mb-2">Theme Options</h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>
-                    <code>primaryColor</code>: Main color for the chatbot
-                  </li>
-                  <li>
-                    <code>textColor</code>: Color for the text
-                  </li>
-                  <li>
-                    <code>backgroundColor</code>: Background color
-                  </li>
-                  <li>
-                    <code>buttonColor</code>: Color for buttons
-                  </li>
-                </ul>
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="font-medium mb-2">Behavior Options</h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>
-                    <code>position</code>: Position of the chat widget
-                  </li>
-                  <li>
-                    <code>greeting</code>: Initial message from the bot
-                  </li>
-                  <li>
-                    <code>title</code>: Title of the chat window
-                  </li>
-                  <li>
-                    <code>avatar</code>: URL to the bot's avatar image
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Full Customization Guide
-            </Button>
-          </CardFooter>
-        </Card>
-      </TabsContent>
-    </Tabs>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="relative">
+          <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm">
+            <code>{code}</code>
+          </pre>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4"
+            onClick={onCopy}
+          >
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            <span className="sr-only">Copy</span>
+          </Button>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button variant="outline" className="w-full">
+          <ExternalLink className="mr-2 h-4 w-4" />
+          View Documentation
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }
-

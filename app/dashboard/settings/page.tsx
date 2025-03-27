@@ -1,4 +1,5 @@
-import type { Metadata } from "next"
+"use client";
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -7,13 +8,49 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Save } from "lucide-react"
+import { getProfile, updateProfile } from "@/app/lib/api-services/user-service" // <-- your fetch/update functions
+import { toast } from "sonner"
 
-export const metadata: Metadata = {
-  title: "Settings - ChatWise",
-  description: "Manage your account and organization settings",
-}
+
+
+
 
 export default function SettingsPage() {
+  const [profile, setProfile] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    username: "",
+  })
+
+  useEffect(() => {
+    getProfile()
+      .then((data) => {
+        setProfile({
+          first_name: data.first_name ?? "",
+          last_name: data.last_name ?? "",
+          email: data.email ?? "",
+          username: data.username ?? "",
+        })
+      })
+      .catch(() => toast.error("Failed to load profile"))
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setProfile((prev) => ({ ...prev, [id]: value }))
+  }
+
+  const handleSave = async () => {
+    try {
+      await updateProfile(profile)
+      toast.success("Profile updated!")
+    } catch (err) {
+      toast.error("Failed to update profile")
+    }
+  }
+
+
   return (
     <div className="space-y-6">
       <div>
@@ -33,49 +70,28 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Settings</CardTitle>
-              <CardDescription>Update your personal information and preferences</CardDescription>
+              <CardDescription>Update your personal information</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" defaultValue="John Doe" />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="john@example.com" />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input id="username" defaultValue="johndoe" />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="first_name">First Name</Label>
+                <Input id="first_name" value={profile.first_name} onChange={handleChange} />
               </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Password</h3>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input id="confirm-password" type="password" />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="last_name">Last Name</Label>
+                <Input id="last_name" value={profile.last_name} onChange={handleChange} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={profile.email} onChange={handleChange} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" value={profile.username} onChange={handleChange} />
               </div>
             </CardContent>
             <CardFooter>
-              <Button>
+              <Button onClick={handleSave}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>
