@@ -1,77 +1,81 @@
-import type { Metadata } from "next"
+"use client"
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, CreditCard } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-export const metadata: Metadata = {
-  title: "Subscription - ChatWise",
-  description: "Manage your ChatWise subscription",
-}
+import { SubscriptionService } from "@/app/lib/api-services/subscription-service"
+import { ChatbotService } from "@/app/lib/api-services/chatbot-service"
+import PlanSelectorModal from "@/app/components/subscription/PlanSelectorModal"
+import { toast } from "sonner"
 
 export default function SubscriptionPage() {
-  // Mock data for current plan
-  const currentPlan = {
-    name: "Professional",
-    price: "$79",
-    billingCycle: "monthly",
-    nextBillingDate: "October 15, 2023",
-    status: "active",
-  }
+  const [currentPlan, setCurrentPlan] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [usage, setUsage] = useState({
+    messages: { used: 0, limit: 0, percentage: 0 },
+    assistants: { used: 0, limit: 0, percentage: 0 },
+    storage: { used: 256, limit: 1024, percentage: 25 },
+  })
 
-  // Mock data for usage
-  const usage = {
-    messages: {
-      used: 1245,
-      limit: 3000,
-      percentage: 41.5,
-    },
-    assistants: {
-      used: 2,
-      limit: 3,
-      percentage: 66.7,
-    },
-    storage: {
-      used: 256,
-      limit: 1024,
-      percentage: 25,
-    },
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const sub = await SubscriptionService.getCurrentSubscription()
+        const plan = await SubscriptionService.getPlanById(sub.plan)
+        const bots = await ChatbotService.getChatbots()
 
-  // Mock data for billing history
-  const billingHistory = [
-    {
-      id: "1",
-      date: "September 15, 2023",
-      amount: "$79.00",
-      status: "Paid",
-    },
-    {
-      id: "2",
-      date: "August 15, 2023",
-      amount: "$79.00",
-      status: "Paid",
-    },
-    {
-      id: "3",
-      date: "July 15, 2023",
-      amount: "$79.00",
-      status: "Paid",
-    },
-  ]
+        const usedAssistants = bots.length
+        const maxAssistants = plan.max_chatbots
+        const usedMessages = 0 // Placeholder for message usage endpoint
+        const maxMessages = plan.max_messages_per_month
 
-  // Features included in the current plan
+        setCurrentPlan({
+          name: plan.name,
+          price: `$${plan.price}`,
+          billingCycle: "monthly",
+          nextBillingDate: sub.end_date,
+          status: sub.is_active ? "active" : "inactive",
+        })
+
+        setUsage({
+          messages: {
+            used: usedMessages,
+            limit: maxMessages,
+            percentage: Math.min((usedMessages / maxMessages) * 100, 100),
+          },
+          assistants: {
+            used: usedAssistants,
+            limit: maxAssistants,
+            percentage: Math.min((usedAssistants / maxAssistants) * 100, 100),
+          },
+          storage: usage.storage,
+        })
+      } catch (err) {
+        toast.error("Failed to load subscription")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
   const features = [
-    "3 AI assistants",
-    "3,000 messages/month",
+    "Multiple AI assistants",
     "Advanced knowledge base",
     "Custom persona builder",
     "Analytics dashboard",
     "Human takeover",
-    "20 training documents",
     "Multi-language support",
   ]
+
+  const billingHistory = []
+
+  if (loading || !currentPlan) return <p>Loading...</p>
 
   return (
     <div className="space-y-6">
@@ -95,7 +99,7 @@ export default function SubscriptionPage() {
                 </p>
               </div>
               <Badge variant="outline" className="bg-emerald-500 text-white">
-                Active
+                {currentPlan.status}
               </Badge>
             </div>
 
@@ -105,54 +109,15 @@ export default function SubscriptionPage() {
 
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Usage this month</h4>
-
               <div className="space-y-2">
-                <div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Messages</span>
-                    <span>
-                      {usage.messages.used} / {usage.messages.limit}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${usage.messages.percentage}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>AI Assistants</span>
-                    <span>
-                      {usage.assistants.used} / {usage.assistants.limit}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${usage.assistants.percentage}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Storage (MB)</span>
-                    <span>
-                      {usage.storage.used} / {usage.storage.limit}
-                    </span>
-                  </div>
-                  <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${usage.storage.percentage}%` }} />
-                  </div>
-                </div>
+                <ProgressBar label="Messages" {...usage.messages} />
+                <ProgressBar label="AI Assistants" {...usage.assistants} />
+                <ProgressBar label="Storage (MB)" {...usage.storage} />
               </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between border-t pt-6">
-            <Button variant="outline">Change Plan</Button>
+            <Button variant="outline" onClick={() => setShowPlanModal(true)}>Change Plan</Button>
             <Button variant="destructive">Cancel Subscription</Button>
           </CardFooter>
         </Card>
@@ -172,12 +137,6 @@ export default function SubscriptionPage() {
               ))}
             </ul>
           </CardContent>
-          <CardFooter className="border-t pt-6">
-            <Button className="w-full">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Update Payment Method
-            </Button>
-          </CardFooter>
         </Card>
       </div>
 
@@ -197,27 +156,50 @@ export default function SubscriptionPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {billingHistory.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>{invoice.date}</TableCell>
-                  <TableCell>{invoice.amount}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-emerald-500 text-white">
-                      {invoice.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Download
-                    </Button>
-                  </TableCell>
+              {billingHistory.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4}>No billing history available.</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                billingHistory.map((invoice: any) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell>{invoice.date}</TableCell>
+                    <TableCell>{invoice.amount}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-emerald-500 text-white">
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        Download
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <PlanSelectorModal open={showPlanModal} onClose={() => setShowPlanModal(false)} />
     </div>
   )
 }
 
+function ProgressBar({ label, used, limit, percentage }: { label: string; used: number; limit: number; percentage: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm">
+        <span>{label}</span>
+        <span>
+          {used} / {limit}
+        </span>
+      </div>
+      <div className="mt-1 h-2 w-full rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  )
+}
