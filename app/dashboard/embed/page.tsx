@@ -7,6 +7,6 @@ export const metadata: Metadata = {
 }
 
 export default function EmbedPage() {
-  return <EmbedPageClient />
+  return <EmbedPageClient chatbotId={1} />
 }
 
