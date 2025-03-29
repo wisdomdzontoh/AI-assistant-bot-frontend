@@ -1,6 +1,9 @@
 import API from "../../lib/api"
 
 export interface Chatbot {
+  primary_color: string
+  persona: string
+  welcome_message: string
   id: number
   organization: number
   name: string
