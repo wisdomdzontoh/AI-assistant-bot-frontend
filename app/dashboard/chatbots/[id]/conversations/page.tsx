@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Bot, User } from "lucide-react"
 import { ChatbotService, ChatMessage } from "@/app/lib/api-services/chatbot-service"
@@ -13,17 +14,14 @@ type ChatSession = {
   messages: ChatMessage[]
 }
 
-type PageProps = {
-  params: {
-    id: string
-  }
-}
-
-export default function ChatbotConversations({ params }: PageProps) {
-  const chatbotId = Number(params.id)
+export default function ChatbotConversations() {
+  const params = useParams()
+  const chatbotId = Number(params?.id)
   const [sessions, setSessions] = useState<ChatSession[]>([])
 
   useEffect(() => {
+    if (!chatbotId) return
+
     ChatbotService.getConversations(chatbotId)
       .then(setSessions)
       .catch((err) => {
@@ -31,7 +29,6 @@ export default function ChatbotConversations({ params }: PageProps) {
         toast.error("Unable to load conversation history")
       })
   }, [chatbotId])
-  
 
   return (
     <div className="space-y-6">
