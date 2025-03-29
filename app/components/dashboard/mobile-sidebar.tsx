@@ -16,9 +16,9 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useAuth } from "../../contexts/auth-context"
+import { useAuth } from "@/app/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 export function MobileSidebar() {
   const pathname = usePathname()
@@ -79,6 +79,9 @@ export function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="flex flex-col p-0">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Dashboard Navigation</SheetTitle>
+        </SheetHeader>
         <div className="border-b px-6 py-5 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="text-xl font-bold bg-gradient-to-r from-[oklch(0.488_0.243_264.376)] to-[oklch(0.551_0.027_264.364)] text-transparent bg-clip-text">

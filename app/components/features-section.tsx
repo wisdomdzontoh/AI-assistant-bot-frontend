@@ -1,3 +1,9 @@
+"use client"
+
+import type React from "react"
+
+import { useRef } from "react"
+import { useInView } from "framer-motion"
 import {
   Globe,
   FileText,
@@ -10,6 +16,7 @@ import {
   Webhook,
   Mail,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function FeaturesSection() {
   const features = [
@@ -66,10 +73,16 @@ export function FeaturesSection() {
   ]
 
   return (
-    <section id="features" className="py-20 bg-slate-50 dark:bg-slate-950">
-      <div className="container px-4 md:px-6">
+    <section id="features" className="py-24 bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-[30%] -left-[10%] w-[50%] h-[50%] bg-blue-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-[30%] -right-[10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="container px-4 md:px-6 relative">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features for Modern Support</h2>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">Powerful Features for Modern Support</h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Everything you need to provide exceptional customer support with the power of AI.
           </p>
@@ -77,18 +90,53 @@ export function FeaturesSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div
+            <FeatureCard
               key={index}
-              className="bg-background rounded-lg p-6 shadow-sm border hover:shadow-md transition-shadow"
-            >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
-            </div>
+              icon={feature.icon}
+              title={feature.title}
+              description={feature.description}
+              index={index}
+            />
           ))}
         </div>
       </div>
     </section>
+  )
+}
+
+function FeatureCard({
+  icon,
+  title,
+  description,
+  index,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  index: number
+}) {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, amount: 0.2 })
+
+  // Calculate delay based on index (0.1s between each card)
+  const delay = `${index * 0.1}s`
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "bg-background rounded-xl p-6 shadow-sm border hover:shadow-md transition-all duration-300 group",
+        "hover:border-blue-500/50 hover:-translate-y-1",
+        isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10",
+      )}
+      style={{ transitionDelay: delay }}
+    >
+      <div className="mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:text-blue-600">
+        {icon}
+      </div>
+      <h3 className="text-xl font-semibold mb-2 group-hover:text-blue-600 transition-colors">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
+    </div>
   )
 }
 
