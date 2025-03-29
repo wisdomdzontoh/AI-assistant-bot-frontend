@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface KnowledgeEntry {
+  chatbot: number
   id: number
   title: string
   source_type: string
