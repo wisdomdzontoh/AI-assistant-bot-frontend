@@ -1,22 +1,20 @@
-import type { Metadata } from "next"
+"use client"
+
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { WidgetCustomizer } from "../../../../components/chatbots/widget-customizer"
+import { WidgetCustomizer } from "@/components/chatbots/widget-customizer"
 import { ArrowLeft } from "lucide-react"
 
-export const metadata: Metadata = {
-  title: "Widget Customization - ChatWise",
-  description: "Customize your chatbot widget",
-}
-
-export default function WidgetCustomizationPage({ params }: { params: { id: string } }) {
-  const chatbotId = Number(params.id)
+export default function WidgetCustomizationPage() {
+  const params = useParams()
+  const chatbotId = Number(params?.id)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={`/dashboard/chatbots/${params.id}`}>
+          <Link href={`/dashboard/chatbots/${params?.id}`}>
             <ArrowLeft className="h-5 w-5" />
             <span className="sr-only">Back</span>
           </Link>
@@ -31,5 +29,3 @@ export default function WidgetCustomizationPage({ params }: { params: { id: stri
     </div>
   )
 }
-
-
