@@ -1,20 +1,35 @@
 import API from "../../lib/api"
 
 export interface Chatbot {
-  enable_human_handoff: boolean | undefined
-  enable_feedback: boolean | undefined
-  enable_attachments: boolean | undefined
-  max_response_tokens: number
-  primary_color: string
-  persona: string
-  welcome_message: string
   id: number
   organization: number
   name: string
   description: string | null
   instructions: string
+  persona: string
+  welcome_message: string
+  primary_color: string
   is_active: boolean
   created_at: string
+  updated_at?: string
+  is_deleted?: boolean
+
+  // Widget settings
+  widget_name: string
+  widget_welcome: string
+  widget_color: string
+  widget_position: "right" | "left"
+  widget_show_branding: boolean
+  widget_feedback: boolean
+  widget_attachments: boolean
+
+  // Feature toggles
+  enable_human_handoff?: boolean
+  enable_feedback?: boolean
+  enable_attachments?: boolean
+
+  // Optional
+  max_response_tokens?: number
 }
 
 export interface ChatSession {
@@ -27,113 +42,123 @@ export interface ChatMessage {
   sender: "user" | "bot"
   content: string
   created_at?: string
-  feedback?: "up" | "down" // 🆕 optional
+  feedback?: "up" | "down"
 }
 
+export interface KnowledgeBaseItem {
+  id: number
+  title: string
+  source_type: "upload" | "url" | "text"
+  created_at: string
+  embedded: boolean
+  keywords?: string
+}
 
 export const ChatbotService = {
+  // Chatbot CRUD
   getChatbots: async (): Promise<Chatbot[]> => {
-    const response = await API.get("/chatbot/chatbots")
-    return response.data
+    const res = await API.get("/chatbot/chatbots")
+    return res.data
   },
-
 
   getChatbot: async (id: number): Promise<Chatbot> => {
-    if (!id) throw new Error("Missing chatbot ID")
-  
-    try {
-      const response = await API.get(`/chatbot/chatbots/${id}/`)
-      return response.data
-    } catch (err: any) {
-      console.error("Failed to fetch chatbot:", err.response?.data || err.message)
-      throw new Error("Failed to load chatbot details")
-    }
-  },
-  
-
-  // Update chatbot widget settings
-  updateWidgetSettings: async (id: number, data: Partial<Chatbot>): Promise<Chatbot> => {
-    const response = await API.put(`/chatbot/chatbots/${id}/`, data)
-    return response.data
+    const res = await API.get(`/chatbot/chatbots/${id}/`)
+    return res.data
   },
 
-  createChatbot: async (chatbot: Partial<Chatbot>): Promise<Chatbot> => {
-    const response = await API.post("/chatbot/chatbots/", chatbot)
-    return response.data
+  createChatbot: async (data: Partial<Chatbot>): Promise<Chatbot> => {
+    const res = await API.post("/chatbot/chatbots/", data)
+    return res.data
   },
 
-  updateChatbot: async (id: number, chatbot: Partial<Chatbot>): Promise<Chatbot> => {
-    const response = await API.put(`/chatbot/chatbots/${id}/`, chatbot)
-    return response.data
+  updateChatbot: async (id: number, data: Partial<Chatbot>): Promise<Chatbot> => {
+    const res = await API.put(`/chatbot/chatbots/${id}/`, data)
+    return res.data
   },
 
   deleteChatbot: async (id: number): Promise<void> => {
     await API.delete(`/chatbot/chatbots/${id}/`)
   },
 
+  // Widget settings
+  updateWidgetSettings: async (id: number, data: Partial<Chatbot>): Promise<Chatbot> => {
+    const res = await API.put(`/chatbot/chatbots/${id}/`, data)
+    return res.data
+  },
+
+  // Sessions & Messaging
   startSession: async (chatbotId: number): Promise<ChatSession> => {
-    const response = await API.post("/chatbot/sessions/start/", { chatbot_id: chatbotId })
-    return response.data
+    const res = await API.post("/chatbot/sessions/start/", { chatbot_id: chatbotId })
+    return res.data
   },
 
   sendMessage: async (sessionId: string, message: string): Promise<{ reply: string }> => {
-    const response = await API.post(`/chatbot/sessions/${sessionId}/message/`, { message })
-    return response.data
+    const res = await API.post(`/chatbot/sessions/${sessionId}/message/`, { message })
+    return res.data
   },
 
-  getSession: async (sessionId: string): Promise<{ session_id: string; messages: ChatMessage[] }> => {
-    const response = await API.get(`/chatbot/sessions/${sessionId}/`)
-    return response.data
+  getSession: async (
+    sessionId: string
+  ): Promise<{ session_id: string; messages: ChatMessage[] }> => {
+    const res = await API.get(`/chatbot/sessions/${sessionId}/`)
+    return res.data
+  },
+
+  getConversations: async (
+    chatbotId: number
+  ): Promise<{ id: number; session_id: string; created_at: string; messages: ChatMessage[] }[]> => {
+    const res = await API.get(`/chatbot/chatbots/${chatbotId}/conversations/`)
+    return res.data
   },
 
   getAnalytics: async (chatbotId: number): Promise<any> => {
-    const response = await API.get(`/chatbot/analytics/${chatbotId}/`)
-    return response.data
+    const res = await API.get(`/chatbot/analytics/${chatbotId}/`)
+    return res.data
   },
 
-  trainChatbot: async (id: number): Promise<void> => {
-    await API.post(`/knowledge/train/${id}/`)
+  trainChatbot: async (chatbotId: number): Promise<void> => {
+    await API.post(`/knowledge/train/${chatbotId}/`)
   },
 
-
-
+  // Knowledge (Upload, Crawl, Delete)
   uploadFile: async (chatbotId: number, file: File): Promise<void> => {
     const formData = new FormData()
     formData.append("chatbot", chatbotId.toString())
     formData.append("source_type", "upload")
     formData.append("title", file.name)
     formData.append("file", file)
-  
+
     const res = await API.post("/knowledge/", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     })
-  
+
     if (res.status !== 201) {
-      const errorText = res.data
-      console.error("Upload failed:", errorText)
+      console.error("Upload failed:", res.data)
       throw new Error(`Failed to upload: ${file.name}`)
     }
   },
 
-  getKnowledge: async (chatbotId: number, page = 1): Promise<{ results: any[], count: number }> => {
-    const response = await API.get(`/knowledge/?chatbot=${chatbotId}&page=${page}`)
-    return response.data
+  getKnowledge: async (
+    chatbotId: number,
+    page = 1
+  ): Promise<{ results: KnowledgeBaseItem[]; count: number }> => {
+    const res = await API.get(`/knowledge/?chatbot=${chatbotId}&page=${page}`)
+    return res.data
   },
 
   deleteKnowledge: async (id: number): Promise<void> => {
     await API.delete(`/knowledge/${id}/`)
   },
 
-
   crawlWebsite: async (
     chatbotId: number,
     values: {
-      url: string;
-      maxPages: number;
-      includeSubdomains: boolean;
-      followExternalLinks: boolean;
+      url: string
+      maxPages: number
+      includeSubdomains: boolean
+      followExternalLinks: boolean
     }
   ): Promise<void> => {
     const payload = {
@@ -149,41 +174,15 @@ export const ChatbotService = {
       content: "",
       keywords: "",
     }
-  
-    const response = await API.post("/knowledge/", payload, {
+
+    const res = await API.post("/knowledge/", payload, {
       headers: {
         "Content-Type": "application/json",
       },
     })
-  
-    if (response.status !== 201) {
-      throw new Error(response.statusText || "Failed to submit crawl job.")
+
+    if (res.status !== 201) {
+      throw new Error(res.statusText || "Failed to submit crawl job.")
     }
   },
-  
-  getConversations: async (chatbotId: number): Promise<{
-    id: number
-    session_id: string
-    created_at: string
-    messages: ChatMessage[]
-  }[]> => {
-    const response = await API.get(`/chatbot/chatbots/${chatbotId}/conversations/`)
-    return response.data
-  },
-  
-  
-  
-  
-  
-  
-  
-  
-  
 }
-
-
-
-
-
-
-
