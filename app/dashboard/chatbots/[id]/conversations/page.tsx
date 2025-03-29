@@ -13,7 +13,13 @@ type ChatSession = {
   messages: ChatMessage[]
 }
 
-export default function ChatbotConversations({ params }: { params: { id: string } }) {
+type PageProps = {
+  params: {
+    id: string
+  }
+}
+
+export default function ChatbotConversations({ params }: PageProps) {
   const chatbotId = Number(params.id)
   const [sessions, setSessions] = useState<ChatSession[]>([])
 
