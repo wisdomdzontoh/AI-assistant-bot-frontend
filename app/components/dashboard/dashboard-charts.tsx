@@ -18,7 +18,14 @@ const conversationData = [
 
 export function DashboardCharts() {
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState([])
+  type ConversationPoint = {
+    date: string
+    conversations: number
+    responses: number
+  }
+  
+  const [data, setData] = useState<ConversationPoint[]>([])
+  
 
   useEffect(() => {
     // Simulate data loading
