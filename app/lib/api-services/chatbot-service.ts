@@ -106,7 +106,9 @@ export const ChatbotService = {
 
   getConversations: async (
     chatbotId: number
-  ): Promise<{ id: number; session_id: string; created_at: string; messages: ChatMessage[] }[]> => {
+  ): Promise<{
+    user_name: string; id: number; session_id: string; created_at: string; messages: ChatMessage[] 
+}[]> => {
     const res = await API.get(`/chatbot/chatbots/${chatbotId}/conversations/`)
     return res.data
   },
@@ -184,5 +186,21 @@ export const ChatbotService = {
     if (res.status !== 201) {
       throw new Error(res.statusText || "Failed to submit crawl job.")
     }
+  },
+
+  submitFeedback: async (messageId: string, feedback: "up" | "down") => {
+    const response = await fetch(`/api/messages/${messageId}/feedback`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ feedback }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit feedback");
+    }
+
+    return response.json();
   },
 }

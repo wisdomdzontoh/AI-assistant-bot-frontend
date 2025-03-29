@@ -44,11 +44,30 @@ export function LiveChat() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const convs = await ChatbotService.getConversations(1) // replace 1 with actual chatbotId
+        const rawConvs = await ChatbotService.getConversations(1) // Replace 1 with actual chatbotId
+
+        const convs: Conversation[] = rawConvs.map((conv) => {
+          const lastMsg = conv.messages?.[conv.messages.length - 1]
+
+          return {
+            id: conv.id.toString(),
+            session_id: conv.session_id,
+            user: {
+              name: conv.user_name || "Anonymous",
+              email: "", // Extend API to include if needed
+              avatar: "", // Extend API to include if needed
+            },
+            lastMessage: lastMsg?.content || "(no message)",
+            lastMessageTime: new Date(lastMsg?.created_at || conv.created_at),
+            unread: false,
+            status: "active", // Change if your API provides this
+          }
+        })
+
         setConversations(convs)
 
         const map: Record<string, Message[]> = {}
-        convs.forEach((conv) => {
+        rawConvs.forEach((conv) => {
           map[conv.id] = conv.messages.map((m: any) => ({
             id: m.id,
             role: m.sender,
@@ -98,10 +117,10 @@ export function LiveChat() {
     try {
       const res = await ChatbotService.sendMessage(
         conversations.find((c) => c.id === activeConversation)?.session_id!,
-        formData
+        JSON.stringify(Object.fromEntries(formData.entries()))
       )
 
-      const reply = res.reply?.result || res.reply
+      const reply = res.reply
 
       const botMsg: Message = {
         id: Date.now().toString() + "-bot",
