@@ -1,6 +1,10 @@
 import API from "../../lib/api"
 
 export interface Chatbot {
+  enable_human_handoff: boolean | undefined
+  enable_feedback: boolean | undefined
+  enable_attachments: boolean | undefined
+  max_response_tokens: number
   primary_color: string
   persona: string
   welcome_message: string

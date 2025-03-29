@@ -73,7 +73,7 @@ export function ChatbotSettings({ id }: ChatbotSettingsProps) {
         const data = await ChatbotService.getChatbot(Number(id))
         form.reset({
           name: data.name,
-          description: data.description,
+          description: data.description ?? "",
           welcomeMessage: data.welcome_message,
           persona: data.persona,
           primaryColor: data.primary_color,
