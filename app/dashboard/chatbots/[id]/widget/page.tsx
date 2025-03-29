@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { WidgetCustomizer } from "@/components/chatbots/widget-customizer"
+import { WidgetCustomizer } from "@/app/components/chatbots/widget-customizer"
 import { ArrowLeft } from "lucide-react"
 
 export default function WidgetCustomizationPage() {
