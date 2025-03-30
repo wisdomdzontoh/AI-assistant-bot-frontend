@@ -73,7 +73,7 @@ export default function SubscriptionPage() {
     "Multi-language support",
   ]
 
-  const billingHistory = []
+  const billingHistory: any[] = []
 
   if (loading || !currentPlan) return <p>Loading...</p>
 
