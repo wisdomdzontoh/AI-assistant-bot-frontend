@@ -18,7 +18,10 @@ export default function EmbedPageClient({ chatbotId }: { chatbotId: number }) {
     const fetchData = async () => {
       try {
         const data = await ChatbotService.getChatbot(chatbotId)
-        setChatbot(data)
+        setChatbot({
+          ...data,
+          description: data.description ?? undefined,
+        })
       } catch (err) {
         console.error("Failed to fetch chatbot info", err)
       }
@@ -133,7 +136,7 @@ export default ChatWiseWidget`
           <WidgetPreview
             chatbotId={chatbotId}
             chatbotName={chatbot.widget_name}
-            welcomeMessage={chatbot.widget_welcome}
+            welcomeMessage={chatbot.widget_welcome || "Welcome to our chatbot!"}
             primaryColor={chatbot.widget_color || "#3B82F6"}
             position={chatbot.widget_position}
           />
