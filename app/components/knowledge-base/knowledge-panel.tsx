@@ -47,7 +47,7 @@ export function KnowledgePanel({ chatbotId }: { chatbotId: number }) {
               <TextEntryForm chatbotId={chatbotId} onSuccess={handleRefresh} />
             </TabsContent>
             <TabsContent value="url">
-              <UrlEntryForm chatbotId={chatbotId} onSuccess={handleRefresh} />
+              <UrlEntryForm chatbotId={chatbotId} />
             </TabsContent>
           </Tabs>
         </CardContent>
