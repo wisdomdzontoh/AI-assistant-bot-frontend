@@ -99,7 +99,7 @@ export function HeroSection() {
           <div className="relative w-full max-w-4xl rounded-xl border shadow-2xl overflow-hidden bg-gradient-to-b from-background to-muted/50">
             <div className="absolute inset-0 bg-grid-pattern opacity-[0.2] mix-blend-plus-lighter"></div>
             <Image
-              src="/placeholder.svg?height=600&width=1200"
+              src="/images/home/dashboard-preview.png?height=600&width=1200"
               alt="ChatWise dashboard preview"
               width={1200}
               height={600}
@@ -124,35 +124,35 @@ export function HeroSection() {
 
         <div className="mt-20 flex flex-wrap justify-center gap-x-12 gap-y-6 opacity-70 animate-fade-in-up animation-delay-500">
           <Image
-            src="/placeholder.svg?height=40&width=120"
+            src="/images/home/hero/chatbot-analytics.png?height=40&width=120"
             alt="Company logo"
             width={120}
             height={40}
             className="grayscale hover:grayscale-0 transition-all duration-300"
           />
           <Image
-            src="/placeholder.svg?height=40&width=120"
+            src="/images/home/hero/chatbot-settings.png?height=40&width=120"
             alt="Company logo"
             width={120}
             height={40}
             className="grayscale hover:grayscale-0 transition-all duration-300"
           />
           <Image
-            src="/placeholder.svg?height=40&width=120"
+            src="/images/home/hero/login.png?height=40&width=120"
             alt="Company logo"
             width={120}
             height={40}
             className="grayscale hover:grayscale-0 transition-all duration-300"
           />
           <Image
-            src="/placeholder.svg?height=40&width=120"
+            src="/images/home/hero/register.png?height=40&width=120"
             alt="Company logo"
             width={120}
             height={40}
             className="grayscale hover:grayscale-0 transition-all duration-300"
           />
           <Image
-            src="/placeholder.svg?height=40&width=120"
+            src="/images/home/hero/training.png?height=40&width=120"
             alt="Company logo"
             width={120}
             height={40}

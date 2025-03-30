@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, Bot, User } from "lucide-react"
+import { Send, Bot, User, RefreshCw } from "lucide-react"
 import { type ChatMessage, ChatbotService } from "@/app/lib/api-services/chatbot-service"
 import { toast } from "sonner"
 import { LoadingScreen } from "@/components/ui/loading-screen"
@@ -27,37 +27,46 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
   const [initializing, setInitializing] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const initSession = async () => {
-      try {
-        const key = `chatbot_session_${chatbotId}`
-        let storedId = localStorage.getItem(key)
+  const key = `chatbot_session_${chatbotId}`
 
-        if (!storedId) {
-          const session = await ChatbotService.startSession(chatbotId)
-          storedId = session.session_id
-          localStorage.setItem(key, storedId)
+  const initializeSession = async (forceNew = false) => {
+    try {
+      let storedId = !forceNew ? localStorage.getItem(key) : null
+      let valid = false
+
+      if (storedId) {
+        try {
+          const fullSession = await ChatbotService.getSession(storedId)
+          const formattedMessages = fullSession.messages.map((m) => ({
+            sender: m.sender,
+            content: m.content,
+            created_at: m.created_at,
+          }))
+          setMessages(formattedMessages)
+          setSessionId(storedId)
+          valid = true
+        } catch {
+          localStorage.removeItem(key)
         }
-
-        setSessionId(storedId)
-
-        const fullSession = await ChatbotService.getSession(storedId)
-        const formattedMessages = fullSession.messages.map((m) => ({
-          sender: m.sender,
-          content: m.content,
-          created_at: m.created_at,
-        }))
-
-        setMessages(formattedMessages)
-      } catch (error) {
-        console.error("Chat session init failed:", error)
-        toast.error("Failed to load or start chat session.")
-      } finally {
-        setInitializing(false)
       }
-    }
 
-    initSession()
+      if (!valid) {
+        const session = await ChatbotService.startSession(chatbotId)
+        storedId = session.session_id
+        localStorage.setItem(key, storedId)
+        setSessionId(storedId)
+        setMessages([])
+      }
+    } catch (error) {
+      console.error("Chat session init failed:", error)
+      toast.error("Failed to load or start chat session.")
+    } finally {
+      setInitializing(false)
+    }
+  }
+
+  useEffect(() => {
+    initializeSession()
   }, [chatbotId])
 
   useEffect(() => {
@@ -81,7 +90,7 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
 
       const botMessage: ChatMessage = {
         sender: "bot",
-        content: res.reply, // this could be a string or object {query, result}
+        content: res.reply,
       }
 
       setMessages((prev) => [...prev, botMessage])
@@ -104,16 +113,21 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
   return (
     <div className="w-full h-[600px] border rounded-lg overflow-hidden flex flex-col bg-background">
       {/* Header */}
-      <div className="bg-primary text-primary-foreground py-3 px-4 flex items-center">
-        <Bot className="h-5 w-5 mr-2" />
-        <h3 className="font-medium text-base">{chatbotName}</h3>
+      <div className="bg-primary text-primary-foreground py-3 px-4 flex items-center justify-between">
+        <div className="flex items-center">
+          <Bot className="h-5 w-5 mr-2" />
+          <h3 className="font-medium text-base">{chatbotName}</h3>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => initializeSession(true)}>
+          <RefreshCw className="h-4 w-4 mr-1" /> New Chat
+        </Button>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((msg, index) => {
           const isBot = msg.sender === "bot"
-          const isStructured = typeof msg.content === "object" && msg.content !== null
+          const isStructured = typeof msg.content === "object" && msg.content !== null && 'query' in msg.content && 'result' in msg.content
 
           return (
             <div
@@ -138,10 +152,10 @@ export function ChatInterface({ chatbotId, chatbotName }: ChatInterfaceProps) {
                 {isStructured ? (
                   <>
                     <p className="text-muted-foreground text-xs mb-1">
-                      <strong>Q:</strong> {isStructured && typeof msg.content === "object" && 'query' in msg.content ? (msg.content as BotReply).query : ""}
+                      <strong>Q:</strong> {typeof msg.content === "object" && msg.content !== null && 'query' in msg.content ? (msg.content as BotReply).query : ""}
                     </p>
                     <p>
-                      <strong>A:</strong> {isStructured && typeof msg.content === "object" && 'result' in msg.content ? (msg.content as BotReply).result : ""}
+                      <strong>A:</strong> {isStructured && typeof msg.content === "object" && msg.content !== null ? (msg.content as BotReply).result : ""}
                     </p>
                   </>
                 ) : (

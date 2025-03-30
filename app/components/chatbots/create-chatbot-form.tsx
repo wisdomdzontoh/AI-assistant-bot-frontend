@@ -60,20 +60,25 @@ export function CreateChatbotForm() {
         instructions: `${values.welcomeMessage}\n\nPersona: ${values.persona}`,
         is_active: true,
       }
-      
-
+  
       const chatbot = await ChatbotService.createChatbot(payload)
-
+  
       toast.success(`Chatbot "${chatbot.name}" created successfully!`)
       router.push("/dashboard/chatbots")
-    } catch (error) {
-      console.error("Error creating chatbot:", error)
-      toast.error("Failed to create chatbot. Please try again.")
+    } catch (error: any) {
+      //console.error("Error creating chatbot:", error)
+  
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Failed to create chatbot. Please try again."
+  
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
   }
-
+  
 
   return (
     <Card className="max-w-2xl mx-auto">

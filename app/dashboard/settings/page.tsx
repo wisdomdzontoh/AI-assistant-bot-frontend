@@ -21,6 +21,7 @@ export default function SettingsPage() {
     last_name: "",
     email: "",
     username: "",
+    is_admin: false,
   })
 
   const [organization, setOrganization] = useState<any>({
@@ -45,6 +46,7 @@ export default function SettingsPage() {
           last_name: data.last_name ?? "",
           email: data.email ?? "",
           username: data.username ?? "",
+          is_admin: data.is_admin ?? false,
         })
       })
       .catch(() => toast.error("Failed to load profile"))
@@ -119,9 +121,16 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    APIKeyService.getKeys().then(setKeys).catch(() => toast.error("Failed to fetch API keys"))
+    APIKeyService.getKeys()
+      .then(setKeys)
+      .catch((err) => {
+        if (err?.response?.status === 403) {
+          toast.info("API key access restricted to admin users")
+        } else {
+          toast.error("Failed to fetch API keys")
+        }
+      })
   }, [])
-
 
   return (
     <div className="space-y-6">
@@ -140,37 +149,42 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Settings</CardTitle>
-              <CardDescription>Update your personal information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="first_name">First Name</Label>
-                <Input id="first_name" value={profile.first_name} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="last_name">Last Name</Label>
-                <Input id="last_name" value={profile.last_name} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={profile.email} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
-                <Input id="username" value={profile.username} onChange={handleChange} />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>Update your personal information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="first_name">First Name</Label>
+              <Input id="first_name" value={profile.first_name} onChange={handleChange} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="last_name">Last Name</Label>
+              <Input id="last_name" value={profile.last_name} onChange={handleChange} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={profile.email} onChange={handleChange} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input id="username" value={profile.username} onChange={handleChange} disabled />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Role</Label>
+              <Input id="role" value={profile.is_admin ? "Admin" : "User"} disabled />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
 
         <TabsContent value="organization">
           <Card>
